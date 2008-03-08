@@ -1,0 +1,175 @@
+<?xml version="1.0"?>
+<overlay xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
+<script type="application/x-javascript"><![CDATA[
+
+window.addEventListener('DOMContentLoaded', function() {
+	window.removeEventListener('DOMContentLoaded', arguments.callee, true);
+
+	const currentRevision = 1;
+	var root = document.documentElement;
+
+	var loadedRevision = root.getAttribute('fullScreenCanvas');
+	if (loadedRevision) {
+		loadedRevision = Number(loadedRevision);
+		if (loadedRevision >= currentRevision) {
+			return;
+		}
+		else if (loadedRevision < currentRevision) {
+			root.setAttribute('fullScreenCanvas', currentRevision);
+			window.fullScreenCanvas.destroy();
+		}
+	}
+
+	window.fullScreenCanvas = {
+		show : function() 
+		{
+			var canvas = this.canvas;
+
+			var w = window.innerWidth;
+			var h = window.innerHeight;
+			canvas.style.width = (canvas.width = w)+'px';
+			canvas.style.height = (canvas.height = h)+'px';
+			var frame = this.frame;
+			if (frame) {
+				frame.style.width = canvas.style.width;
+				frame.style.height = canvas.style.height;
+			}
+			try {
+				var ctx = canvas.getContext("2d");
+				ctx.clearRect(0, 0, w, h);
+				ctx.save();
+				ctx.drawWindow(window, 0, 0, w, h, "rgb(255,255,255)");
+				ctx.restore();
+
+				var browsers = [this.browser];
+				if ('SplitBrowser' in window) browsers = browsers.concat(SplitBrowser.browsers);
+				browsers.forEach(function(aBrowser) {
+					var b = aBrowser;
+					if (b.localName == 'subbrowser') b = b.browser;
+					var TST = b.treeStyleTab;
+					var frame = b.contentWindow;
+					var x = (b.localName == 'tabbrowser' ? b.mCurrentBrowser : b ).boxObject.x;
+					var y = (b.localName == 'tabbrowser' ? b.mCurrentBrowser : b ).boxObject.y;
+					var w = frame.innerWidth;
+					var h = frame.innerHeight;
+					var dx = 0;
+					var dy = 0;
+					if (TST &&
+						TST.autoHideEnabled &&
+						TST.tabbarShown) {
+						var pos = b.getAttribute(TST.kTABBAR_POSITION);
+						switch (pos)
+						{
+							case 'left':
+								dx = TST.tabbarWidth;
+								w -= TST.tabbarWidth;
+								break;
+							case 'right':
+								x += TST.tabbarWidth;
+								w -= TST.tabbarWidth;
+								break;
+							case 'top':
+								dy = TST.tabbarHeight;
+								h -= TST.tabbarHeight;
+								break;
+							case 'bottom':
+								y += TST.tabbarHeight;
+								h -= TST.tabbarHeight;
+								break;
+						}
+					}
+					ctx.save();
+					ctx.translate(x, y);
+					ctx.drawWindow(frame, dx+frame.scrollX, dy+frame.scrollY, w, h, "rgb(255,255,255)");
+					ctx.restore();
+				});
+
+				this.container.removeAttribute('collapsed');
+			}
+			catch(e) {
+				this.container.setAttribute('collapsed', true);
+			}
+		},
+
+		hide : function() 
+		{
+			this.container.setAttribute('collapsed', true);
+		},
+
+		get browser() 
+		{
+			return 'SplitBrowser' in window ? window.SplitBrowser.activeBrowser :
+				window.gBrowser ;
+		},
+		get frame()
+		{
+			return document.getElementById('fullScreenCanvas-frame');
+		},
+		get canvas()
+		{
+			return (this.frame ? this.frame.contentDocument : document ).getElementById('fullScreenCanvas-canvas');
+		},
+		get container()
+		{
+			return document.getElementById('fullScreenCanvas-container');
+		},
+
+		init : function() {
+			var canvas = document.createElementNS('http://www.w3.org/1999/xhtml', 'canvas');
+			canvas.setAttribute('id', 'fullScreenCanvas-canvas');
+			if (!this.isGecko19) {
+				this.container.appendChild(canvas);
+				return
+			}
+			/* We have to put canvas into a frame because Gecko 1.9
+			   renders canvas under the main content area if it is
+			   not in a frame.
+			*/
+			var frame = document.createElement('browser');
+			frame.setAttribute('id', 'fullScreenCanvas-frame');
+			frame.setAttribute('disablehistory', 'true');
+			this.container.appendChild(frame);
+			frame.style.width = 0;
+			frame.style.height = 0;
+			window.setTimeout(function() {
+				canvas = frame.contentDocument.importNode(canvas, true);
+				var root = frame.contentDocument.documentElement;
+				root.setAttribute('style', 'overflow: none; margin: 0;padding: 0;');
+				while (root.hasChildNodes())
+				{
+					root.removeChild(root.firstChild);
+				}
+				root.appendChild(canvas);
+			}, 100);
+		},
+
+		get isGecko19()
+		{
+			const XULAppInfo = Components.classes['@mozilla.org/xre/app-info;1']
+					.getService(Components.interfaces.nsIXULAppInfo);
+			var version = XULAppInfo.platformVersion.split('.');
+			return parseInt(version[0]) >= 2 || parseInt(version[1]) >= 9;
+		},
+
+		destroy : function() {
+		}
+	};
+
+	fullScreenCanvas.init();
+}, true);
+
+]]></script>
+
+<window id="main-window">
+	<vbox id="fullScreenCanvas-container"
+		collapsed="true"
+		style="
+			position: fixed;
+			z-index: 60000;
+			top: 0;
+			left: 0;
+		"
+		onclick="fullScreenCanvas.hide();"/>
+</window>
+
+</overlay>
