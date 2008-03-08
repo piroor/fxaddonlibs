@@ -25,6 +25,8 @@ window.addEventListener('DOMContentLoaded', function() {
 		{
 			var canvas = this.canvas;
 
+			var color = '-moz-field';
+
 			var w = window.innerWidth;
 			var h = window.innerHeight;
 			canvas.style.width = (canvas.width = w)+'px';
@@ -35,10 +37,10 @@ window.addEventListener('DOMContentLoaded', function() {
 				frame.style.height = canvas.style.height;
 			}
 			try {
-				var ctx = canvas.getContext("2d");
+				var ctx = canvas.getContext('2d');
 				ctx.clearRect(0, 0, w, h);
 				ctx.save();
-				ctx.drawWindow(window, 0, 0, w, h, "rgb(255,255,255)");
+				ctx.drawWindow(window, 0, 0, w, h, color);
 				ctx.restore();
 
 				var browsers = [this.browser];
@@ -80,7 +82,7 @@ window.addEventListener('DOMContentLoaded', function() {
 					}
 					ctx.save();
 					ctx.translate(x, y);
-					ctx.drawWindow(frame, dx+frame.scrollX, dy+frame.scrollY, w, h, "rgb(255,255,255)");
+					ctx.drawWindow(frame, dx+frame.scrollX, dy+frame.scrollY, w, h, color);
 					ctx.restore();
 				});
 
