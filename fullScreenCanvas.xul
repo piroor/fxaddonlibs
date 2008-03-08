@@ -23,14 +23,15 @@ window.addEventListener('DOMContentLoaded', function() {
 	window.fullScreenCanvas = {
 		show : function() 
 		{
-			var canvas = this.canvas;
-
 			var color = '-moz-field';
+			var canvas = this.canvas;
 
 			var w = window.innerWidth;
 			var h = window.innerHeight;
 			canvas.style.width = (canvas.width = w)+'px';
 			canvas.style.height = (canvas.height = h)+'px';
+			canvas.style.top = canvas.style.left = 0;
+			canvas.style.zIndex = 65000;
 			var frame = this.frame;
 			if (frame) {
 				frame.style.width = canvas.style.width;
@@ -86,6 +87,7 @@ window.addEventListener('DOMContentLoaded', function() {
 					ctx.restore();
 				});
 
+				canvas.style.position = 'fixed';
 				this.container.removeAttribute('collapsed');
 			}
 			catch(e) {
@@ -95,6 +97,7 @@ window.addEventListener('DOMContentLoaded', function() {
 
 		hide : function() 
 		{
+			this.canvas.style.position = 'static';
 			this.container.setAttribute('collapsed', true);
 		},
 
