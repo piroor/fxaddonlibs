@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<?xml-stylesheet href="extensibleToolbarButton.css" type="text/css"?>
+<overlay xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
+<script type="application/x-javascript"><![CDATA[
+
+window.addEventListener('DOMContentLoaded', function() {
+	window.removeEventListener('DOMContentLoaded', arguments.callee, true);
+
+	const currentRevision = 1;
+
+	var b = document.getElementById('content');
+	if (!b || b.localName != 'tabbrowser') return;
+
+	var root = document.documentElement;
+
+	var loadedRevision = root.getAttribute('extensibleToolbarButton');
+	if (loadedRevision) {
+		loadedRevision = Number(loadedRevision);
+		if (loadedRevision >= currentRevision) {
+			return;
+		}
+		else if (loadedRevision < currentRevision) {
+			root.setAttribute('extensibleToolbarButton', currentRevision);
+			return;
+		}
+	}
+
+	root.setAttribute('extensibleToolbarButton', currentRevision);
+}, true);
+
+]]></script>
+</overlay>
