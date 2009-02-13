@@ -1,3 +1,9 @@
+/*
+ lisence: The MIT License, Copyright (c) 2009 SHIMODA "Piro" Hiroshi
+   http://www.cozmixng.org/repos/piro/fx3-compatibility-lib/trunk/license.txt
+ original:
+   https://www.cozmixng.org/repos/piro/fx3-compatibility-lib/trunk/prefs.js
+*/
 (function() {
 	const currentRevision = 1;
 
