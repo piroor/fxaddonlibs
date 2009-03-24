@@ -4,6 +4,10 @@
 	-moz-binding: url(tabFx2Compatible.xml#tabbrowser-tab) !important;
 }
 
+:root[tabFx2Compatible="2"][tabFx2Compatible-whole="true"] .tabbrowser-tab {
+	-moz-binding: url(tabFx2Compatible.xml#tabbrowser-tab-whole) !important;
+}
+
 :root[tabFx2Compatible="2"] .tabbrowser-tab[busy] > hbox > stack > .tab-icon-image,
 :root[tabFx2Compatible="2"] .tabbrowser-tab[busy] > hbox > hbox > stack > .tab-icon-image {
 	list-style-image: url("chrome://global/skin/throbber/Throbber-small.gif") !important;
