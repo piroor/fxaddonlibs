@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="Shift_JIS"?>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="ja" lang="ja">
+<head>
+	<meta http-equiv="Content-Type" content="text/html;charset=Shift_JIS" />
+	<title>テストケース</title>
+	<style id="style" type="text/css">
+		* {
+			font-size: 16px !important;
+			margin: 0 !important;
+			padding: 0 !important;
+			font-family: monospace !important;
+		}
+		p {
+			margin-bottom: 1em !important;
+		}
+		.positionedBox {
+			width: 100px !important;
+			height: 100px !important;
+			margin: 0 !important;
+			padding: 0 !important;
+			background: gray;
+			border: 2px solid !important;
+			line-height: 1 !important;
+		}
+		#positionedBoxRelative {
+			position: relative !important;
+			left: 100px !important;
+			top: 30px !important;
+			border: 3px solid !important;
+		}
+		#positionedBoxAbsolute {
+			position: absolute !important;
+			left: auto !important;
+			right: 10px !important;
+			top: 10px !important;
+			border: 4px solid !important;
+		}
+		#positionedBoxFixed {
+			position: fixed !important;
+			left: 40px !important;
+			top: 30px !important;
+			border: 5px solid !important;
+		}
+	</style>
+</head>
+<body>
+<p id="positionedBoxStatic" class="positionedBox">通常配置のボックス</p>
+<p id="positionedBoxRelative" class="positionedBox">相対配置のボックス</p>
+<p id="positionedBoxAbsolute" class="positionedBox">絶対配置のボックス</p>
+<p id="positionedBoxFixed" class="positionedBox">固定配置のボックス</p>
+<div style="border: 1px solid blue; height: 4000px;">padding</div>
+</html>

@@ -8,7 +8,7 @@ function setUp()
 	sv = {};
 	sv.__proto__ = namespace.window['piro.sakura.ne.jp'].boxObject;
 
-	yield Do(utils.loadURI('fixtures/testcase.html'));
+	yield Do(utils.loadURI('fixtures/box.html'));
 	content.scrollTo(content.scrollMaxX+10, content.scrollMaxY+10);
 }
 
