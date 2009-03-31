@@ -41,9 +41,10 @@
 				};
 			try {
 				var rect = aNode.getBoundingClientRect();
+				var style = this._getComputedStyle(aNode);
 				var frame = aNode.ownerDocument.defaultView;
-				box.x = rect.left + frame.scrollX;
-				box.y = rect.top + frame.scrollY;
+				box.x = rect.left + frame.scrollX + this._getPropertyPixelValue(style, 'border-left-width');
+				box.y = rect.top + frame.scrollY + this._getPropertyPixelValue(style, 'border-top-width');
 				box.width  = rect.right-rect.left;
 				box.height = rect.bottom-rect.top;
 
@@ -71,8 +72,25 @@
 				}
 			}
 			catch(e) {
+				alert(e);
 			}
+
+			for (let i in box)
+			{
+				box[i] = parseInt(box[i]);
+			}
+
 			return box;
+		},
+
+		_getComputedStyle : function(aNode)
+		{
+			return aNode.ownerDocument.defaultView.getComputedStyle(aNode, null);
+		},
+
+		_getPropertyPixelValue : function(aStyle, aProperty)
+		{
+			return parseInt(aStyle.getPropertyValue(aProperty).replace('px', ''));
 		},
 
 		_getFrameOwnerFromFrame : function(aFrame)
