@@ -25,6 +25,28 @@ function test__getFrameOwnerFromFrame()
 	assert.equals($('frame2'), sv._getFrameOwnerFromFrame($('frame2').contentWindow));
 }
 
+function test_getBoxObjectFromBoxObjectFor()
+{
+	var originalBox = gBrowser.boxObject;
+	var box = {
+			x       : originalBox.x,
+			y       : originalBox.y,
+			width   : originalBox.width,
+			height  : originalBox.height,
+			screenX : originalBox.screenX,
+			screenY : originalBox.screenY
+		};
+	assert.equals(box, sv.getBoxObjectFromBoxObjectFor(gBrowser, false));
+	assert.equals(box, sv.getBoxObjectFromBoxObjectFor(gBrowser));
+
+	var style = gBrowser.ownerDocument.defaultView.getComputedStyle(gBrowser, null);
+	box.left = box.x - parseInt(style.getPropertyValue('border-left-width').replace('px', ''));
+	box.top = box.y - parseInt(style.getPropertyValue('border-top-width').replace('px', ''));
+	box.right = box.left + box.width;
+	box.bottom = box.top + box.height;
+	assert.equals(box, sv.getBoxObjectFromBoxObjectFor(gBrowser, true));
+}
+
 function test_getBoxObjectFromClientRectFor()
 {
 	var box;
@@ -35,50 +57,87 @@ function test_getBoxObjectFromClientRectFor()
 	var baseX = containerBox.screenX + parseInt(containerStyle.getPropertyValue('border-left-width').replace('px', ''));
 	var baseY = containerBox.screenY + parseInt(containerStyle.getPropertyValue('border-top-width').replace('px', ''));
 
-	function assertBoxObject(aNode)
+	function assertBoxObject(aActualBox, aNode)
 	{
-		if (!('getBoxObjectFor' in content.document)) return;
-		var box = sv.getBoxObjectFromClientRectFor(aNode);
-		var actualBox = content.document.getBoxObjectFor(aNode);
-		assert.equals(
-			[actualBox.x, actualBox.y, actualBox.width, actualBox.height, actualBox.screenX, actualBox.screenY],
-			[box.x, box.y, box.width, box.height, box.screenX, box.screenY]
-		);
+		var box = { x : aActualBox.x, y : aActualBox.y, width : aActualBox.width, height : aActualBox.height, screenX : aActualBox.screenX, screenY : aActualBox.screenY };
+		assert.equals(box, sv.getBoxObjectFromClientRectFor(aNode, false));
+		assert.equals(aActualBox, sv.getBoxObjectFromClientRectFor(aNode, true));
+		assert.equals(box, sv.getBoxObjectFromClientRectFor(aNode));
 	}
 
-	box = sv.getBoxObjectFromClientRectFor($('positionedBoxStatic'));
-	assert.equals(2, box.x);
-	assert.equals(2, box.y);
-	assert.equals(baseX, box.screenX);
-	assert.equals(baseY - content.scrollY, box.screenY);
-	assert.equals(100 + 2 + 2, box.width);
-	assert.equals(100 + 2 + 2, box.height);
-//	assertBoxObject($('positionedBoxStatic'));
+	function assertCompareBoxObjects(aNode)
+	{
+		if (!('getBoxObjectFor' in content.document)) return;
+		var box = sv.getBoxObjectFromClientRectFor(aNode, true);
+		var actualBox = sv.getBoxObjectFromBoxObjectFor(aNode, true);
+		assert.equals(actualBox, box);
+	}
 
-	box = sv.getBoxObjectFromClientRectFor($('positionedBoxRelative'));
-	assert.equals(100 + 3, box.x);
-	assert.equals(100 + 2 + 2 + 30 + 3, box.y);
-	assert.equals(baseX + 100, box.screenX);
-	assert.equals(baseY - content.scrollY + 100 + 2 + 2 + 30, box.screenY);
-	assert.equals(100 + 3 + 3, box.width);
-	assert.equals(100 + 3 + 3, box.height);
-//	assertBoxObject($('positionedBoxAbsolute'));
+	assertBoxObject(
+		{
+			x       : 2,
+			y       : 2,
+			width   : 100 + 2 + 2,
+			height  : 100 + 2 + 2,
+			screenX : baseX,
+			screenY : baseY - content.scrollY,
+			left    : 0 - content.scrollX,
+			top     : 0 - content.scrollY,
+			right   : 100 + 2 + 2 - content.scrollX,
+			bottom  : 100 + 2 + 2 - content.scrollY
+		},
+		$('positionedBoxStatic')
+	);
+//	assertCompareBoxObjects($('positionedBoxStatic'));
 
-	box = sv.getBoxObjectFromClientRectFor($('positionedBoxAbsolute'));
-	assert.equals(root.offsetWidth - 100 - 4 - 4 - 10 + 4, box.x);
-	assert.equals(10 + 4, box.y);
-	assert.equals(baseX + root.offsetWidth - 100 - 4 - 4 - 10, box.screenX);
-	assert.equals(baseY - content.scrollY + 5 + 5, box.screenY);
-	assert.equals(100 + 4 + 4, box.width);
-	assert.equals(100 + 4 + 4, box.height);
-//	assertBoxObject($('positionedBoxRelative'));
+	assertBoxObject(
+		{
+			x       : 100 + 3,
+			y       : 100 + 2 + 2 + 30 + 3,
+			width   : 100 + 3 + 3,
+			height  : 100 + 3 + 3,
+			screenX : baseX + 100,
+			screenY : baseY - content.scrollY + 100 + 2 + 2 + 30,
+			left    : 100 - content.scrollX,
+			top     : 100 + 2 + 2 - content.scrollY + 30,
+			right   : 100 - content.scrollX + 100 + 3 + 3,
+			bottom  : 100 + 2 + 2 - content.scrollY + 30 + 100 + 3 + 3
+		},
+		$('positionedBoxRelative')
+	);
+//	assertCompareBoxObjects($('positionedBoxRelative'));
 
-	box = sv.getBoxObjectFromClientRectFor($('positionedBoxFixed'));
-	assert.equals(40 + 5, box.x);
-	assert.equals(30 + 5, box.y);
-	assert.equals(baseX + 40, box.screenX);
-	assert.equals(baseY + 30, box.screenY);
-	assert.equals(100 + 5 + 5, box.width);
-	assert.equals(100 + 5 + 5, box.height);
-//	assertBoxObject($('positionedBoxFixed'));
+	assertBoxObject(
+		{
+			x       : root.offsetWidth - 100 - 4 - 4 - 10 + 4,
+			y       : 10 + 4,
+			width   : 100 + 4 + 4,
+			height  : 100 + 4 + 4,
+			screenX : baseX + root.offsetWidth - 100 - 4 - 4 - 10,
+			screenY : baseY - content.scrollY + 5 + 5,
+			left    : root.offsetWidth - 100 - 4 - 4 - 10 - content.scrollX,
+			top     : 10 - content.scrollY,
+			right   : root.offsetWidth - 100 - 4 - 4 - 10 - content.scrollX + 100 + 4 + 4,
+			bottom  : 10 - content.scrollY + 100 + 4 + 4
+		},
+		$('positionedBoxAbsolute')
+	);
+//	assertCompareBoxObjects($('positionedBoxAbsolute'));
+
+	assertBoxObject(
+		{
+			x       : 40 + 5,
+			y       : 30 + 5,
+			width   : 100 + 5 + 5,
+			height  : 100 + 5 + 5,
+			screenX : baseX + 40,
+			screenY : baseY + 30,
+			left    : 40,
+			top     : 30,
+			right   : 100 + 5 + 5 + 40,
+			bottom  : 100 + 5 + 5 + 30
+		},
+		$('positionedBoxFixed')
+	);
+//	assertCompareBoxObjects($('positionedBoxFixed'));
 }
