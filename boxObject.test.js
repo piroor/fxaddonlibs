@@ -2,6 +2,7 @@ var namespace = { window : {} };
 utils.include('boxObject.js', namespace, 'Shift_JIS');
 
 var sv;
+var markupDocumentViewer;
 
 function setUp()
 {
@@ -25,9 +26,52 @@ function test__getFrameOwnerFromFrame()
 	assert.equals($('frame2'), sv._getFrameOwnerFromFrame($('frame2').contentWindow));
 }
 
+
+function getRect(aNode)
+{
+	var rect = aNode.getBoundingClientRect();
+	return {
+			left   : Math.round(rect.left),
+			top    : Math.round(rect.top),
+			right  : Math.round(rect.right),
+			bottom : Math.round(rect.bottom)
+		};
+}
+
+function getRectFromBoxObject(aBoxObject, aNode)
+{
+	var style = aNode.ownerDocument.defaultView.getComputedStyle(aNode, null);
+	var rect = {
+			left : aBoxObject.x - parseInt(style.getPropertyValue('border-left-width').replace('px', '')),
+			top  : aBoxObject.y - parseInt(style.getPropertyValue('border-top-width').replace('px', ''))
+		};
+	rect.right  = rect.left + aBoxObject.width;
+	rect.bottom = rect.top + aBoxObject.height;
+	return rect;
+}
+
+function assertNearlyEqualBox(aExpected, aActual)
+{
+	var props = [];
+	for (var i in aExpected)
+	{
+		props.push(i);
+		assert.inDelta(aExpected[i], aActual[i], 2, i);
+	}
+	for (var j in aActual)
+	{
+		assert.compare(-1, '<', props.indexOf(j), j);
+	}
+}
+
+test_getBoxObjectFromBoxObjectFor.setUp = function()
+{
+	yield Do(utils.loadURI('fixtures/box.xul'));
+}
 function test_getBoxObjectFromBoxObjectFor()
 {
-	var originalBox = gBrowser.boxObject;
+	var button = $('button');
+	var originalBox = button.boxObject;
 	var box = {
 			x       : originalBox.x,
 			y       : originalBox.y,
@@ -36,20 +80,21 @@ function test_getBoxObjectFromBoxObjectFor()
 			screenX : originalBox.screenX,
 			screenY : originalBox.screenY
 		};
-	assert.equals(box, sv.getBoxObjectFromBoxObjectFor(gBrowser, false));
-	assert.equals(box, sv.getBoxObjectFromBoxObjectFor(gBrowser));
+	assert.equals(box, sv.getBoxObjectFromBoxObjectFor(button, false));
+	assert.equals(box, sv.getBoxObjectFromBoxObjectFor(button));
 
-	var style = gBrowser.ownerDocument.defaultView.getComputedStyle(gBrowser, null);
-	box.left = box.x - parseInt(style.getPropertyValue('border-left-width').replace('px', ''));
-	box.top = box.y - parseInt(style.getPropertyValue('border-top-width').replace('px', ''));
-	box.right = box.left + box.width;
-	box.bottom = box.top + box.height;
-	assert.equals(box, sv.getBoxObjectFromBoxObjectFor(gBrowser, true));
+	var rect = getRectFromBoxObject(box, button);
+	assertNearlyEqualBox(getRect(button), rect);
+
+	for (var i in rect)
+	{
+		box[i] = rect[i];
+	}
+	assert.equals(box, sv.getBoxObjectFromBoxObjectFor(button, true));
 }
 
 function test_getBoxObjectFromClientRectFor()
 {
-	var box;
 	var root = content.document.documentElement;
 
 	var containerBox = gBrowser.boxObject;
@@ -63,14 +108,6 @@ function test_getBoxObjectFromClientRectFor()
 		assert.equals(box, sv.getBoxObjectFromClientRectFor(aNode, false));
 		assert.equals(aActualBox, sv.getBoxObjectFromClientRectFor(aNode, true));
 		assert.equals(box, sv.getBoxObjectFromClientRectFor(aNode));
-	}
-
-	function assertCompareBoxObjects(aNode)
-	{
-		if (!('getBoxObjectFor' in content.document)) return;
-		var box = sv.getBoxObjectFromClientRectFor(aNode, true);
-		var actualBox = sv.getBoxObjectFromBoxObjectFor(aNode, true);
-		assert.equals(actualBox, box);
 	}
 
 	assertBoxObject(
@@ -88,7 +125,6 @@ function test_getBoxObjectFromClientRectFor()
 		},
 		$('positionedBoxStatic')
 	);
-//	assertCompareBoxObjects($('positionedBoxStatic'));
 
 	assertBoxObject(
 		{
@@ -105,7 +141,6 @@ function test_getBoxObjectFromClientRectFor()
 		},
 		$('positionedBoxRelative')
 	);
-//	assertCompareBoxObjects($('positionedBoxRelative'));
 
 	assertBoxObject(
 		{
@@ -122,7 +157,6 @@ function test_getBoxObjectFromClientRectFor()
 		},
 		$('positionedBoxAbsolute')
 	);
-//	assertCompareBoxObjects($('positionedBoxAbsolute'));
 
 	assertBoxObject(
 		{
@@ -139,5 +173,35 @@ function test_getBoxObjectFromClientRectFor()
 		},
 		$('positionedBoxFixed')
 	);
-//	assertCompareBoxObjects($('positionedBoxFixed'));
+}
+
+test_getBoxObjectFromSomethingFor_withZoom.setUp = function()
+{
+	utils.setPref('browser.zoom.full', true);
+	markupDocumentViewer = content
+		.QueryInterface(Ci.nsIInterfaceRequestor)
+		.getInterface(Ci.nsIWebNavigation)
+		.QueryInterface(Ci.nsIDocShell)
+		.contentViewer
+		.QueryInterface(Ci.nsIMarkupDocumentViewer);
+	markupDocumentViewer.fullZoom = 0.5;
+}
+test_getBoxObjectFromSomethingFor_withZoom.tearDown = function()
+{
+	markupDocumentViewer.fullZoom = 1;
+	markupDocumentViewer = null;
+}
+function test_getBoxObjectFromSomethingFor_withZoom()
+{
+	function assertCompareBoxObjects(aNode)
+	{
+		var box = sv.getBoxObjectFromClientRectFor(aNode, true);
+		var actualBox = sv.getBoxObjectFromBoxObjectFor(aNode, true);
+		assert.equals(actualBox, box);
+	}
+
+	assertCompareBoxObjects($('positionedBoxStatic'));
+	assertCompareBoxObjects($('positionedBoxRelative'));
+	assertCompareBoxObjects($('positionedBoxAbsolute'));
+	assertCompareBoxObjects($('positionedBoxFixed'));
 }

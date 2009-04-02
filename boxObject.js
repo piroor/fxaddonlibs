@@ -16,6 +16,7 @@
 		return;
 	}
 
+	var Cc = Components.classes;
 	var Ci = Components.interfaces;
 
 	window['piro.sakura.ne.jp'].boxObject = {
@@ -41,6 +42,8 @@
 				};
 			if (!aUnify) return box;
 
+			var zoom = this.getZoom(aNode.ownerDocument.defaultView);
+
 			var style = this._getComputedStyle(aNode);
 			box.left = box.x - this._getPropertyPixelValue(style, 'border-left-width');
 			box.top = box.y - this._getPropertyPixelValue(style, 'border-top-width');
@@ -65,6 +68,8 @@
 					screenY : 0
 				};
 			try {
+				var zoom = this.getZoom(aNode.ownerDocument.defaultView);
+
 				var rect = aNode.getBoundingClientRect();
 				if (aUnify) {
 					box.left   = rect.left;
@@ -177,6 +182,28 @@
 				}
 			}
 			return null;
+		},
+
+		Prefs : Cc['@mozilla.org/preferences;1']
+			.getService(Ci.nsIPrefBranch)
+			.QueryInterface(Ci.nsIPrefBranch2),
+
+		getZoom : function(aFrame)
+		{
+			try {
+				if (!this.Prefs.getBoolPref('browser.zoom.full'))
+					return 1;
+			}
+			catch(e) {
+				return 1;
+			}
+			var markupDocumentViewer = aFrame.top
+					.QueryInterface(Ci.nsIInterfaceRequestor)
+					.getInterface(Ci.nsIWebNavigation)
+					.QueryInterface(Ci.nsIDocShell)
+					.contentViewer
+					.QueryInterface(Ci.nsIMarkupDocumentViewer);
+			return markupDocumentViewer.fullZoom;
 		}
 
 	};
