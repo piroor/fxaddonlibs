@@ -272,7 +272,7 @@ function test_getBoxObjectFromSomethingFor_withZoom()
 		$('positionedBoxFixed')
 	);
 
-
+/*
 	function assertCompareBoxObjects(aNode)
 	{
 		var actualBox = sv.getBoxObjectFromBoxObjectFor(aNode, true);
@@ -284,4 +284,5 @@ function test_getBoxObjectFromSomethingFor_withZoom()
 	assertCompareBoxObjects($('positionedBoxRelative'));
 	assertCompareBoxObjects($('positionedBoxAbsolute'));
 	assertCompareBoxObjects($('positionedBoxFixed'));
+*/
 }
