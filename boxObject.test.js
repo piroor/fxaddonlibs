@@ -26,44 +26,6 @@ function test__getFrameOwnerFromFrame()
 	assert.equals($('frame2'), sv._getFrameOwnerFromFrame($('frame2').contentWindow));
 }
 
-
-function getRect(aNode)
-{
-	var rect = aNode.getBoundingClientRect();
-	return {
-			left   : Math.round(rect.left),
-			top    : Math.round(rect.top),
-			right  : Math.round(rect.right),
-			bottom : Math.round(rect.bottom)
-		};
-}
-
-function getRectFromBoxObject(aBoxObject, aNode)
-{
-	var style = aNode.ownerDocument.defaultView.getComputedStyle(aNode, null);
-	var rect = {
-			left : aBoxObject.x - parseInt(style.getPropertyValue('border-left-width').replace('px', '')),
-			top  : aBoxObject.y - parseInt(style.getPropertyValue('border-top-width').replace('px', ''))
-		};
-	rect.right  = rect.left + aBoxObject.width;
-	rect.bottom = rect.top + aBoxObject.height;
-	return rect;
-}
-
-function assertNearlyEqualBox(aExpected, aActual)
-{
-	var props = [];
-	for (var i in aExpected)
-	{
-		props.push(i);
-		assert.inDelta(aExpected[i], aActual[i], 2, i);
-	}
-	for (var j in aActual)
-	{
-		assert.compare(-1, '<', props.indexOf(j), j);
-	}
-}
-
 test_getBoxObjectFromBoxObjectFor.setUp = function()
 {
 	yield Do(utils.loadURI('fixtures/box.xul'));
@@ -83,115 +45,31 @@ function test_getBoxObjectFromBoxObjectFor()
 	assert.equals(box, sv.getBoxObjectFromBoxObjectFor(button, false));
 	assert.equals(box, sv.getBoxObjectFromBoxObjectFor(button));
 
-	var rect = getRectFromBoxObject(box, button);
-	assertNearlyEqualBox(getRect(button), rect);
-
-	for (var i in rect)
-	{
-		box[i] = rect[i];
-	}
+	var rect = button.getBoundingClientRect();
+	box.left   = Math.round(rect.left);
+	box.top    = Math.round(rect.top);
+	box.right  = Math.round(rect.right);
+	box.bottom = Math.round(rect.bottom);
 	assert.equals(box, sv.getBoxObjectFromBoxObjectFor(button, true));
 }
 
-function test_getBoxObjectFromClientRectFor()
+function assertNearlyEqualBox(aExpected, aActual)
 {
-	var root = content.document.documentElement;
-
-	var containerBox = gBrowser.boxObject;
-	var containerStyle = window.getComputedStyle(gBrowser, null);
-	var baseX = containerBox.screenX + parseInt(containerStyle.getPropertyValue('border-left-width').replace('px', ''));
-	var baseY = containerBox.screenY + parseInt(containerStyle.getPropertyValue('border-top-width').replace('px', ''));
-
-	function assertBoxObject(aActualBox, aNode)
-	{
-		var box = { x : aActualBox.x, y : aActualBox.y, width : aActualBox.width, height : aActualBox.height, screenX : aActualBox.screenX, screenY : aActualBox.screenY };
-		assert.equals(box, sv.getBoxObjectFromClientRectFor(aNode, false));
-		assert.equals(aActualBox, sv.getBoxObjectFromClientRectFor(aNode, true));
-		assert.equals(box, sv.getBoxObjectFromClientRectFor(aNode));
+	assert.equals(aExpected.x, aActual.x);
+	assert.equals(aExpected.y, aActual.y);
+	assert.equals(aExpected.width, aActual.width);
+	assert.equals(aExpected.height, aActual.height);
+	if ('left' in aExpected) {
+		assert.equals(aExpected.left, aActual.left);
+		assert.equals(aExpected.right, aActual.right);
+		assert.equals(aExpected.top, aActual.top);
+		assert.equals(aExpected.bottom, aActual.bottom);
 	}
-
-	assertBoxObject(
-		{
-			x       : 2,
-			y       : 2,
-			width   : 100 + 2 + 2,
-			height  : 100 + 2 + 2,
-			screenX : baseX,
-			screenY : baseY - content.scrollY,
-			left    : 0 - content.scrollX,
-			top     : 0 - content.scrollY,
-			right   : 100 + 2 + 2 - content.scrollX,
-			bottom  : 100 + 2 + 2 - content.scrollY
-		},
-		$('positionedBoxStatic')
-	);
-
-	assertBoxObject(
-		{
-			x       : 100 + 3,
-			y       : 100 + 2 + 2 + 30 + 3,
-			width   : 100 + 3 + 3,
-			height  : 100 + 3 + 3,
-			screenX : baseX + 100,
-			screenY : baseY - content.scrollY + 100 + 2 + 2 + 30,
-			left    : 100 - content.scrollX,
-			top     : 100 + 2 + 2 - content.scrollY + 30,
-			right   : 100 - content.scrollX + 100 + 3 + 3,
-			bottom  : 100 + 2 + 2 - content.scrollY + 30 + 100 + 3 + 3
-		},
-		$('positionedBoxRelative')
-	);
-
-	assertBoxObject(
-		{
-			x       : root.offsetWidth - 100 - 4 - 4 - 10 + 4,
-			y       : 10 + 4,
-			width   : 100 + 4 + 4,
-			height  : 100 + 4 + 4,
-			screenX : baseX + root.offsetWidth - 100 - 4 - 4 - 10,
-			screenY : baseY - content.scrollY + 5 + 5,
-			left    : root.offsetWidth - 100 - 4 - 4 - 10 - content.scrollX,
-			top     : 10 - content.scrollY,
-			right   : root.offsetWidth - 100 - 4 - 4 - 10 - content.scrollX + 100 + 4 + 4,
-			bottom  : 10 - content.scrollY + 100 + 4 + 4
-		},
-		$('positionedBoxAbsolute')
-	);
-
-	assertBoxObject(
-		{
-			x       : 40 + 5,
-			y       : 30 + 5,
-			width   : 100 + 5 + 5,
-			height  : 100 + 5 + 5,
-			screenX : baseX + 40,
-			screenY : baseY + 30,
-			left    : 40,
-			top     : 30,
-			right   : 100 + 5 + 5 + 40,
-			bottom  : 100 + 5 + 5 + 30
-		},
-		$('positionedBoxFixed')
-	);
+	assert.inDelta(aExpected.screenY, aActual.screenY, 2);
+	assert.inDelta(aExpected.screenX, aActual.screenX, 2);
 }
 
-test_getBoxObjectFromSomethingFor_withZoom.setUp = function()
-{
-	utils.setPref('browser.zoom.full', true);
-	markupDocumentViewer = content
-		.QueryInterface(Ci.nsIInterfaceRequestor)
-		.getInterface(Ci.nsIWebNavigation)
-		.QueryInterface(Ci.nsIDocShell)
-		.contentViewer
-		.QueryInterface(Ci.nsIMarkupDocumentViewer);
-	markupDocumentViewer.fullZoom = 2;
-}
-test_getBoxObjectFromSomethingFor_withZoom.tearDown = function()
-{
-	markupDocumentViewer.fullZoom = 1;
-	markupDocumentViewer = null;
-}
-function test_getBoxObjectFromSomethingFor_withZoom()
+function assertBoxObjectFromClientRect(aZoom)
 {
 	var root = content.document.documentElement;
 
@@ -210,9 +88,16 @@ function test_getBoxObjectFromSomethingFor_withZoom()
 				screenX : aActualBox.screenX,
 				screenY : aActualBox.screenY
 			};
-		assert.equals(box, sv.getBoxObjectFromClientRectFor(aNode, false));
-		assert.equals(aActualBox, sv.getBoxObjectFromClientRectFor(aNode, true));
-		assert.equals(box, sv.getBoxObjectFromClientRectFor(aNode));
+		if (aZoom == 1) {
+			assert.equal(box, sv.getBoxObjectFromClientRectFor(aNode, false));
+			assert.equal(aActualBox, sv.getBoxObjectFromClientRectFor(aNode, true));
+			assert.equal(box, sv.getBoxObjectFromClientRectFor(aNode));
+		}
+		else {
+			assertNearlyEqualBox(box, sv.getBoxObjectFromClientRectFor(aNode, false));
+			assertNearlyEqualBox(aActualBox, sv.getBoxObjectFromClientRectFor(aNode, true));
+			assertNearlyEqualBox(box, sv.getBoxObjectFromClientRectFor(aNode));
+		}
 	}
 
 	assertBoxObject(
@@ -222,7 +107,7 @@ function test_getBoxObjectFromSomethingFor_withZoom()
 			width   : 100 + 2 + 2,
 			height  : 100 + 2 + 2,
 			screenX : baseX,
-			screenY : baseY + (-content.scrollY * 2),
+			screenY : baseY + (-content.scrollY * aZoom),
 			left    : 0 - content.scrollX,
 			top     : 0 - content.scrollY,
 			right   : 100 + 2 + 2 - content.scrollX,
@@ -237,8 +122,8 @@ function test_getBoxObjectFromSomethingFor_withZoom()
 			y       : 100 + 2 + 2 + 30 + 3,
 			width   : 100 + 3 + 3,
 			height  : 100 + 3 + 3,
-			screenX : baseX + (100 * 2),
-			screenY : baseY + ((-content.scrollY + 100 + 2 + 2 + 30) * 2),
+			screenX : baseX + (100 * aZoom),
+			screenY : baseY + ((-content.scrollY + 100 + 2 + 2 + 30) * aZoom),
 			left    : 100 - content.scrollX,
 			top     : 100 + 2 + 2 - content.scrollY + 30,
 			right   : 100 - content.scrollX + 100 + 3 + 3,
@@ -253,8 +138,8 @@ function test_getBoxObjectFromSomethingFor_withZoom()
 			y       : 10 + 4,
 			width   : 100 + 4 + 4,
 			height  : 100 + 4 + 4,
-			screenX : baseX + ((root.offsetWidth - 100 - 4 - 4 - 10) * 2),
-			screenY : baseY + ((-content.scrollY + 5 + 5) * 2),
+			screenX : baseX + ((root.offsetWidth - 100 - 4 - 4 - 10) * aZoom),
+			screenY : baseY + ((-content.scrollY + 5 + 5) * aZoom),
 			left    : root.offsetWidth - 100 - 4 - 4 - 10 - content.scrollX,
 			top     : 10 - content.scrollY,
 			right   : root.offsetWidth - 100 - 4 - 4 - 10 - content.scrollX + 100 + 4 + 4,
@@ -269,8 +154,8 @@ function test_getBoxObjectFromSomethingFor_withZoom()
 			y       : 30 + 5,
 			width   : 100 + 5 + 5,
 			height  : 100 + 5 + 5,
-			screenX : baseX + (40 * 2),
-			screenY : baseY + (30 * 2),
+			screenX : baseX + (40 * aZoom),
+			screenY : baseY + (30 * aZoom),
 			left    : 40,
 			top     : 30,
 			right   : 100 + 5 + 5 + 40,
@@ -292,4 +177,30 @@ function test_getBoxObjectFromSomethingFor_withZoom()
 	assertCompareBoxObjects($('positionedBoxAbsolute'));
 	assertCompareBoxObjects($('positionedBoxFixed'));
 */
+}
+
+function test_getBoxObjectFromClientRectFor()
+{
+	assertBoxObjectFromClientRect(1);
+}
+
+test_getBoxObjectFromSomethingFor_withZoom.setUp = function()
+{
+	utils.setPref('browser.zoom.full', true);
+	markupDocumentViewer = content
+		.QueryInterface(Ci.nsIInterfaceRequestor)
+		.getInterface(Ci.nsIWebNavigation)
+		.QueryInterface(Ci.nsIDocShell)
+		.contentViewer
+		.QueryInterface(Ci.nsIMarkupDocumentViewer);
+	markupDocumentViewer.fullZoom = 2;
+}
+test_getBoxObjectFromSomethingFor_withZoom.tearDown = function()
+{
+	markupDocumentViewer.fullZoom = 1;
+	markupDocumentViewer = null;
+}
+function test_getBoxObjectFromSomethingFor_withZoom()
+{
+	assertBoxObjectFromClientRect(2);
 }
