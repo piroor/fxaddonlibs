@@ -42,8 +42,6 @@
 				};
 			if (!aUnify) return box;
 
-			var zoom = this.getZoom(aNode.ownerDocument.defaultView);
-
 			var style = this._getComputedStyle(aNode);
 			box.left = box.x - this._getPropertyPixelValue(style, 'border-left-width');
 			box.top = box.y - this._getPropertyPixelValue(style, 'border-top-width');
@@ -94,17 +92,18 @@
 				box.height = rect.bottom-rect.top;
 
 				// "screenX" and "screenY" are absolute positions of the "border-box".
-				box.screenX = rect.left;
-				box.screenY = rect.top;
+				box.screenX = rect.left * zoom;
+				box.screenY = rect.top * zoom;
 				var owner = aNode;
 				while (true)
 				{
 					frame = owner.ownerDocument.defaultView;
+					zoom  = this.getZoom(frame);
 					owner = this._getFrameOwnerFromFrame(frame);
 
 					let style = this._getComputedStyle(owner);
-					box.screenX += this._getPropertyPixelValue(style, 'border-left-width');
-					box.screenY += this._getPropertyPixelValue(style, 'border-top-width');
+					box.screenX += this._getPropertyPixelValue(style, 'border-left-width') * zoom;
+					box.screenY += this._getPropertyPixelValue(style, 'border-top-width') * zoom;
 
 					if (!owner) {
 						box.screenX += frame.screenX;
@@ -119,8 +118,8 @@
 					}
 
 					let ownerRect = owner.getBoundingClientRect();
-					box.screenX += ownerRect.left;
-					box.screenY += ownerRect.top;
+					box.screenX += ownerRect.left * zoom;
+					box.screenY += ownerRect.top * zoom;
 				}
 			}
 			catch(e) {
