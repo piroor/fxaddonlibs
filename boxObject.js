@@ -5,7 +5,7 @@
    https://www.cozmixng.org/repos/piro/fx3-compatibility-lib/trunk/boxObject.js
 */
 (function() {
-	const currentRevision = 2;
+	const currentRevision = 3;
 
 	if (!('piro.sakura.ne.jp' in window)) window['piro.sakura.ne.jp'] = {};
 
