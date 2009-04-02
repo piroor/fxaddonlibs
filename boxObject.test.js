@@ -65,8 +65,8 @@ function assertNearlyEqualBox(aExpected, aActual)
 		assert.equals(aExpected.top, aActual.top);
 		assert.equals(aExpected.bottom, aActual.bottom);
 	}
-	assert.inDelta(aExpected.screenY, aActual.screenY, 2);
-	assert.inDelta(aExpected.screenX, aActual.screenX, 2);
+	assert.inDelta(aExpected.screenY, aActual.screenY, 1);
+	assert.inDelta(aExpected.screenX, aActual.screenX, 1);
 }
 
 function assertBoxObjectFromClientRect(aZoom)
