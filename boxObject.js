@@ -97,9 +97,9 @@
 				var owner = aNode;
 				while (true)
 				{
+					owner = this._getFrameOwnerFromFrame(frame);
 					frame = owner.ownerDocument.defaultView;
 					zoom  = this.getZoom(frame);
-					owner = this._getFrameOwnerFromFrame(frame);
 
 					let style = this._getComputedStyle(owner);
 					box.screenX += this._getPropertyPixelValue(style, 'border-left-width') * zoom;

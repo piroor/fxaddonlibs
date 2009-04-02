@@ -184,7 +184,7 @@ test_getBoxObjectFromSomethingFor_withZoom.setUp = function()
 		.QueryInterface(Ci.nsIDocShell)
 		.contentViewer
 		.QueryInterface(Ci.nsIMarkupDocumentViewer);
-	markupDocumentViewer.fullZoom = 0.5;
+	markupDocumentViewer.fullZoom = 2;
 }
 test_getBoxObjectFromSomethingFor_withZoom.tearDown = function()
 {
@@ -202,7 +202,14 @@ function test_getBoxObjectFromSomethingFor_withZoom()
 
 	function assertBoxObject(aActualBox, aNode)
 	{
-		var box = { x : aActualBox.x, y : aActualBox.y, width : aActualBox.width, height : aActualBox.height, screenX : aActualBox.screenX, screenY : aActualBox.screenY };
+		var box = {
+				x       : aActualBox.x,
+				y       : aActualBox.y,
+				width   : aActualBox.width,
+				height  : aActualBox.height,
+				screenX : aActualBox.screenX,
+				screenY : aActualBox.screenY
+			};
 		assert.equals(box, sv.getBoxObjectFromClientRectFor(aNode, false));
 		assert.equals(aActualBox, sv.getBoxObjectFromClientRectFor(aNode, true));
 		assert.equals(box, sv.getBoxObjectFromClientRectFor(aNode));
@@ -215,7 +222,7 @@ function test_getBoxObjectFromSomethingFor_withZoom()
 			width   : 100 + 2 + 2,
 			height  : 100 + 2 + 2,
 			screenX : baseX,
-			screenY : baseY + (-content.scrollY * 0.5),
+			screenY : baseY + (-content.scrollY * 2),
 			left    : 0 - content.scrollX,
 			top     : 0 - content.scrollY,
 			right   : 100 + 2 + 2 - content.scrollX,
@@ -230,8 +237,8 @@ function test_getBoxObjectFromSomethingFor_withZoom()
 			y       : 100 + 2 + 2 + 30 + 3,
 			width   : 100 + 3 + 3,
 			height  : 100 + 3 + 3,
-			screenX : baseX + (100 * 0.5),
-			screenY : baseY + ((-content.scrollY + 100 + 2 + 2 + 30) * 0.5),
+			screenX : baseX + (100 * 2),
+			screenY : baseY + ((-content.scrollY + 100 + 2 + 2 + 30) * 2),
 			left    : 100 - content.scrollX,
 			top     : 100 + 2 + 2 - content.scrollY + 30,
 			right   : 100 - content.scrollX + 100 + 3 + 3,
@@ -246,8 +253,8 @@ function test_getBoxObjectFromSomethingFor_withZoom()
 			y       : 10 + 4,
 			width   : 100 + 4 + 4,
 			height  : 100 + 4 + 4,
-			screenX : baseX + ((root.offsetWidth - 100 - 4 - 4 - 10) * 0.5),
-			screenY : baseY + ((-content.scrollY + 5 + 5) * 0.5),
+			screenX : baseX + ((root.offsetWidth - 100 - 4 - 4 - 10) * 2),
+			screenY : baseY + ((-content.scrollY + 5 + 5) * 2),
 			left    : root.offsetWidth - 100 - 4 - 4 - 10 - content.scrollX,
 			top     : 10 - content.scrollY,
 			right   : root.offsetWidth - 100 - 4 - 4 - 10 - content.scrollX + 100 + 4 + 4,
@@ -262,8 +269,8 @@ function test_getBoxObjectFromSomethingFor_withZoom()
 			y       : 30 + 5,
 			width   : 100 + 5 + 5,
 			height  : 100 + 5 + 5,
-			screenX : baseX + (40 * 0.5),
-			screenY : baseY + (30 * 0.5),
+			screenX : baseX + (40 * 2),
+			screenY : baseY + (30 * 2),
 			left    : 40,
 			top     : 30,
 			right   : 100 + 5 + 5 + 40,
