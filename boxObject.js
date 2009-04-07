@@ -1,4 +1,12 @@
 /*
+ "getBoxObjectFor()" compatibility library for Firefox 3.6 or later
+
+ Usage:
+   // use instead of HTMLDocument.getBoxObjectFor(HTMLElement)
+   var boxObject = window['piro.sakura.ne.jp']
+                         .boxObject
+                         .getBoxObjectFor(HTMLElement);
+
  lisence: The MIT License, Copyright (c) 2009 SHIMODA "Piro" Hiroshi
    http://www.cozmixng.org/repos/piro/fx3-compatibility-lib/trunk/license.txt
  original:
