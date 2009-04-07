@@ -1,4 +1,17 @@
 <?xml version="1.0"?>
+<!--
+ Extensible Toolbar Button library for Firefox 3 or later
+
+ Usage:
+   <?xul-overlay href="extensibleToolbarButton.xul"?>
+
+ lisence: The MIT License, Copyright (c) 2009 SHIMODA "Piro" Hiroshi
+   http://www.cozmixng.org/repos/piro/fx3-compatibility-lib/trunk/license.txt
+ original:
+   http://www.cozmixng.org/repos/piro/fx3-compatibility-lib/trunk/extensibleToolbarButton.xul
+   http://www.cozmixng.org/repos/piro/fx3-compatibility-lib/trunk/extensibleToolbarButton.xml
+   http://www.cozmixng.org/repos/piro/fx3-compatibility-lib/trunk/extensibleToolbarButton.css
+-->
 <bindings id="extensibleToolbarButtonBindings"
 	xmlns="http://www.mozilla.org/xbl"
 	xmlns:xul="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
