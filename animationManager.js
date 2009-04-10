@@ -22,7 +22,7 @@
    http://www.cozmixng.org/repos/piro/fx3-compatibility-lib/trunk/animationManager.js
 */
 (function() {
-	const currentRevision = 3;
+	const currentRevision = 4;
 
 	if (!('piro.sakura.ne.jp' in window)) window['piro.sakura.ne.jp'] = {};
 
@@ -87,6 +87,12 @@
 			if (!this.timer) return;
 			window.clearInterval(this.timer);
 			this.timer = null;
+		},
+
+		removeAllTasks : function()
+		{
+			this.stop();
+			this.tasks = [];
 		},
 
 		tasks    : tasks,
