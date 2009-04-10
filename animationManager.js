@@ -43,7 +43,7 @@
 	window['piro.sakura.ne.jp'].animationManager = {
 		revision : currentRevision,
 
-		addTask : function(aTask, aBeginningValue, aFinalValue, aDuration) 
+		addTask : function(aTask, aBeginningValue, aTotalChange, aDuration) 
 		{
 			if (!aTask) return;
 			this.tasks.push({
