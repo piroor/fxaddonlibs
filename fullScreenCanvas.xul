@@ -6,6 +6,7 @@
    window.fullScreenCanvas.show();
    ... // do something
    window.fullScreenCanvas.hide();
+   var zoom = window.fullScreenCanvas.getZoomForFrame(window.content);
 
  lisence: The MIT License, Copyright (c) 2009 SHIMODA "Piro" Hiroshi
    http://www.cozmixng.org/repos/piro/fx3-compatibility-lib/trunk/license.txt
@@ -18,7 +19,7 @@
 window.addEventListener('DOMContentLoaded', function() {
 	window.removeEventListener('DOMContentLoaded', arguments.callee, true);
 
-	const currentRevision = 6;
+	const currentRevision = 7;
 	var root = document.documentElement;
 
 	var loadedRevision = root.getAttribute('fullScreenCanvas');
@@ -141,18 +142,23 @@ window.addEventListener('DOMContentLoaded', function() {
 				this.container.setAttribute('collapsed', true);
 			}
 		},
+
 		getZoomForFrame : function(aFrame)
 		{
-			const Prefs = Components.classes['@mozilla.org/preferences;1'].getService(Components.interfaces.nsIPrefBranch);;
+			const Prefs = Components
+					.classes['@mozilla.org/preferences;1']
+					.getService(Components.interfaces.nsIPrefBranch);
 			try {
-				if (Prefs.getBoolPref('browser.zoom.full'))
-					return  aFrame
+				if (Prefs.getBoolPref('browser.zoom.full')) {
+					var zoom = aFrame
 						.QueryInterface(Components.interfaces.nsIInterfaceRequestor)
 						.getInterface(Components.interfaces.nsIWebNavigation)
 						.QueryInterface(Components.interfaces.nsIDocShell)
 						.contentViewer
 						.QueryInterface(Components.interfaces.nsIMarkupDocumentViewer)
 						.fullZoom;
+					return (zoom * 1000 % 1) ? zoom+0.025 : zoom ;
+				}
 			}
 			catch(e) {
 			}
