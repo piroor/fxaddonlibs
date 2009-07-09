@@ -21,9 +21,6 @@
 <overlay xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
 <script type="application/x-javascript; version=1.7"><![CDATA[
 (function() {
-	alert('BookmarkPropertiesPanel' in window);
-	alert(BookmarkPropertiesPanel._determineItemInfo);
-
 	if (!('BookmarkPropertiesPanel' in window) ||
 		!BookmarkPropertiesPanel._determineItemInfo ||
 		BookmarkPropertiesPanel._determineItemInfo.toSource().indexOf('__folderNameOverride') > -1)
@@ -31,17 +28,17 @@
 
 	eval('BookmarkPropertiesPanel._determineItemInfo = '+BookmarkPropertiesPanel._determineItemInfo.toSource(
 		'{',
-		<![CDATA[{
-			var __folderNameOverride = null;
-			try {
-				__folderNameOverride = Components.classes['@mozilla.org/preferences;1']
-					.getService(Components.interfaces.nsIPrefBranch)
-					.getCharPref('temp.showMinimalAddMultiBookmarkUI.folderName');
-				__folderNameOverride = decodeURIComponent(escape(__folderNameOverride));
-			}
-			catch(e) {
-			}
-		]]>.toString()
+		['{',
+			'var __folderNameOverride = null;',
+			'try {',
+			'	__folderNameOverride = Components.classes["@mozilla.org/preferences;1"]',
+			'		.getService(Components.interfaces.nsIPrefBranch)',
+			'		.getCharPref("temp.showMinimalAddMultiBookmarkUI.folderName");',
+			'	__folderNameOverride = decodeURIComponent(escape(__folderNameOverride));',
+			'}',
+			'catch(e) {',
+			'}'
+		].join('')
 	).replace(
 		'this._strings.getString("bookmarkAllTabsDefault")',
 		'__folderNameOverride || $&'
