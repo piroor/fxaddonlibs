@@ -6,8 +6,8 @@
    in chrome.manifest:
      overlay  chrome://browser/content/browser.xul
               chrome://***/content/bookmarkMultipleTabs.xul
-     overlay  chrome://browser/content/places/bookmarksProperties2.xul
-              chrome://***/content/bookmarkMultipleTabs_bookmarksPropertiesOverlay.xul
+     overlay  chrome://browser/content/places/bookmarkProperties2.xul
+              chrome://***/content/bookmarkMultipleTabs_bookmarkPropertiesOverlay.xul
 
    in JS files:
      window['piro.sakura.ne.jp'].bookmarkMultipleTabs.addBookmarkFor(tabsArray, folderName);
@@ -16,11 +16,14 @@
    http://www.cozmixng.org/repos/piro/fx3-compatibility-lib/trunk/license.txt
  original:
    http://www.cozmixng.org/repos/piro/fx3-compatibility-lib/trunk/bookmarkMultipleTabs.xul
-   http://www.cozmixng.org/repos/piro/fx3-compatibility-lib/trunk/bookmarkMultipleTabs_bookmarksPropertiesOverlay.xul
+   http://www.cozmixng.org/repos/piro/fx3-compatibility-lib/trunk/bookmarkMultipleTabs_bookmarkPropertiesOverlay.xul
 -->
 <overlay xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
 <script type="application/x-javascript; version=1.7"><![CDATA[
 (function() {
+	alert('BookmarkPropertiesPanel' in window);
+	alert(BookmarkPropertiesPanel._determineItemInfo);
+
 	if (!('BookmarkPropertiesPanel' in window) ||
 		!BookmarkPropertiesPanel._determineItemInfo ||
 		BookmarkPropertiesPanel._determineItemInfo.toSource().indexOf('__folderNameOverride') > -1)
