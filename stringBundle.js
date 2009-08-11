@@ -39,21 +39,15 @@
 			}
 			return this._cache[aURI];
 		},
-		_cache : {},
-
-		get Service()
-		{
-			if (!this._Service) {
-				this._Service = Cc['@mozilla.org/intl/stringbundle;1']
-								.getService(Ci.nsIStringBundleService);
-			}
-			return this._Service;
-		}
+		_cache : {}
 	};
+
+	const Service = Cc['@mozilla.org/intl/stringbundle;1']
+						.getService(Ci.nsIStringBundleService);
 
 	function StringBundle(aURI) 
 	{
-		this._bundle = window['piro.sakura.ne.jp'].stringBundle.createBundle(aURI);
+		this._bundle = Service.createBundle(aURI);
 	}
 	StringBundle.prototype = {
 		getString : function(aKey) {
