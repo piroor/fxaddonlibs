@@ -41,17 +41,17 @@
 
 		isAvailable : function(aId)
 		{
-			return this.isInstalled(aId) && this.isEnabled(aId);
+			return (this.isInstalled(aId) && this.isEnabled(aId)) ? true : false ;
 		},
 
 		isInstalled : function(aId)
 		{
-			return this.ExtensionManager.getInstallLocation(aId);
+			return this.ExtensionManager.getInstallLocation(aId) ? true : false ;
 		},
 
 		getInstalledLocation : function(aId)
 		{
-			var location = this.isInstalled(aId);
+			var location = this.ExtensionManager.getInstallLocation(aId);
 			return location ? location.location : null ;
 		},
 
