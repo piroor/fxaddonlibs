@@ -8,6 +8,7 @@
    // if (window['piro.sakura.ne.jp'].extensions.isInstalled('my.extension.id@example.com') &&
    //     window['piro.sakura.ne.jp'].extensions.isEnabled('my.extension.id@example.com'))
    //     window['piro.sakura.ne.jp'].extensions.goToOptions('my.extension.id@example.com');
+   var dir = window['piro.sakura.ne.jp'].extensions.getInstalledLocation('my.extension.id@example.com');
 
  lisence: The MIT License, Copyright (c) 2009 SHIMODA "Piro" Hiroshi
    http://www.cozmixng.org/repos/piro/fx3-compatibility-lib/trunk/license.txt
@@ -46,6 +47,12 @@
 		isInstalled : function(aId)
 		{
 			return this.ExtensionManager.getInstallLocation(aId);
+		},
+
+		getInstalledLocation : function(aId)
+		{
+			var location = this.isInstalled(aId);
+			return location ? location.location : null ;
 		},
 
 		isEnabled : function(aId)
