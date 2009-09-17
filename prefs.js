@@ -25,7 +25,7 @@
    http://www.cozmixng.org/repos/piro/fx3-compatibility-lib/trunk/prefs.js
 */
 (function() {
-	const currentRevision = 2;
+	const currentRevision = 3;
 
 	if (!('piro.sakura.ne.jp' in window)) window['piro.sakura.ne.jp'] = {};
 
@@ -112,7 +112,7 @@
 			return true;
 		},
 
-		setDefaultPref : function(aPrefstring)
+		setDefaultPref : function(aPrefstring, aNewValue)
 		{
 			return this.setPref(aPrefstring, aNewValue, this.DefaultPrefs);
 		},
