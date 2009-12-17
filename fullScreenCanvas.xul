@@ -2,6 +2,21 @@
 <!--
  Full Screen Canvas
 
+ ***************************Note!!***************************
+ This library is obsolete. You don't have to use this even
+ if you want to do heavy operations without refreshing.
+ You should use following method instead of this...
+
+ var rootContentViewer = window.top
+        .QueryInterface(Components.interfaces.nsIInterfaceRequestor)
+        .getInterface(Components.interfaces.nsIWebNavigation)
+        .QueryInterface(Components.interfaces.nsIDocShell)
+        .contentViewer;
+ rootContentViewer.hide(); // stop rendering
+ /* do something */
+ rootContentViewer.show(); // start rendering
+ ************************************************************
+
  Usage:
    window.fullScreenCanvas.show();
    ... // do something
