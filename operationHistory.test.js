@@ -122,7 +122,6 @@ function test_addEntry()
 	);
 }
 
-
 function test_undoRedo()
 {
 	var log = [];
@@ -204,4 +203,27 @@ function test_undoRedo()
 	assertHistory(2, 3);
 
 	assert.equals('u3,r3,u3,u2,u1,r1,r2,r3,u3,u2,u1,r1,r2,u4,r4,u4,u2,u1,r1,r2,r4', log.join(','));
+}
+
+function test_doUndoableTask()
+{
+	sv.doUndoableTask(
+		function() {
+			sv.doUndoableTask(
+				function() {
+					sv.doUndoableTask(
+						function() {
+						},
+						{ label  : 'entry 3' }
+					);
+				},
+				{ label  : 'entry 2' }
+			);
+		},
+		{ label  : 'entry 1' }
+	);
+
+	var history = sv.getHistory();
+	assert.equals(1, history.entries.length, utils.inspect(history.entries));
+	assert.equals('entry 1', history.entries[0].label);
 }
