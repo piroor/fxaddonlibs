@@ -98,12 +98,13 @@
 		kMAX_ENTRIES : 999,
 		kWINDOW_ID : 'ui-operation-global-history-window-id',
 
-		doUndoableTask : function()
+		// old name, for backward compatibility
+		addEntry : function()
 		{
-			this.addEntry.apply(this, arguments);
+			this.doUndoableTask.apply(this, arguments);
 		},
 
-		addEntry : function()
+		doUndoableTask : function()
 		{
 			var options = this._getOptionsFromArguments(arguments);
 			var history = options.history;
