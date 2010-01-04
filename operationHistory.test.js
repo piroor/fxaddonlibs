@@ -137,21 +137,42 @@ function test_undoRedo()
 	              onUndo : function() { log.push('u3'); },
 	              onRedo : function() { log.push('r3'); } });
 
+	function assertIndex(aIndex)
+	{
+		assert.equals(aIndex, sv.getHistory().index);
+	}
+
+	assertIndex(2);
 	sv.undo(); // u3
+	assertIndex(1);
 	sv.undo(); // u2
+	assertIndex(0);
 	sv.undo(); // u1
+	assertIndex(0);
 	sv.redo(); // r1
+	assertIndex(1);
 	sv.redo(); // r2
+	assertIndex(2);
 	sv.redo(); // r3
+	assertIndex(2);
 	sv.redo(); // --
+	assertIndex(2);
 	sv.redo(); // --
+	assertIndex(2);
 	sv.undo(); // u3
+	assertIndex(1);
 	sv.undo(); // u2
+	assertIndex(0);
 	sv.undo(); // u1
+	assertIndex(0);
 	sv.undo(); // --
+	assertIndex(0);
 	sv.undo(); // --
+	assertIndex(0);
 	sv.undo(); // --
+	assertIndex(0);
 	sv.redo(); // r1
+	assertIndex(1);
 
 	assert.equals('u3,u2,u1,r1,r2,r3,u3,u2,u1,r1', log.join(','));
 }
