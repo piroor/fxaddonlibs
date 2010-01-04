@@ -154,7 +154,7 @@
 		{
 			var options = this._getOptionsFromArguments(arguments);
 			var history = options.history;
-			if (history.index < 0)
+			if (history.index < 0 || this._doingUndo)
 				return false;
 
 			this._doingUndo = true;
@@ -193,7 +193,7 @@
 			var options = this._getOptionsFromArguments(arguments);
 			var history = options.history;
 			var max = history.entries.length;
-			if (history.index >= max)
+			if (history.index >= max || this._doingUndo)
 				return false;
 
 			this._doingUndo = true;
@@ -375,6 +375,19 @@
 			removedTables.forEach(function(aName) {
 				delete this._tables[aName];
 			}, this);
+		},
+
+		get _doingUndo()
+		{
+			return this._tables._doingUndo;
+		},
+		set _doingUndo(aValue)
+		{
+			if (aValue)
+				this._tables._doingUndo = true;
+			else
+				delete this._tables._doingUndo;
+			return aValue;
 		},
 
 		get WindowMediator() {

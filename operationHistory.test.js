@@ -128,14 +128,14 @@ function test_undoRedo()
 	var log = [];
 
 	sv.addEntry({ label  : 'anonymous 1',
-	              onUndo : function() { log.push('u1'); },
+	              onUndo : function() { log.push('u1'); sv.undo(); },
 	              onRedo : function() { log.push('r1'); } });
 	sv.addEntry({ label : 'anonymous 2',
 	              onUndo : function() { log.push('u2'); },
-	              onRedo : function() { log.push('r2'); } });
+	              onRedo : function() { log.push('r2'); sv.redo(); } });
 	sv.addEntry({ label : 'anonymous 3',
-	              onUndo : function() { log.push('u3'); },
-	              onRedo : function() { log.push('r3'); } });
+	              onUndo : function() { log.push('u3'); sv.undo(); },
+	              onRedo : function() { log.push('r3'); sv.redo(); } });
 
 	function assertHistory(aIndex, aCount)
 	{
@@ -205,4 +205,3 @@ function test_undoRedo()
 
 	assert.equals('u3,r3,u3,u2,u1,r1,r2,r3,u3,u2,u1,r1,r2,u4,r4,u4,u2,u1,r1,r2,r4', log.join(','));
 }
-
