@@ -5,42 +5,58 @@
    var OH = window['piro.sakura.ne.jp'].operationHistory;
 
    // window specific history
-   OH.addEntry(
+   OH.doUndoableTask(
+     // the task which is undo-able (optional)
+     function() {
+       MyService.myProp = newValue;
+     },
+
+     // name of history (optional)
      'MyAddonFeature',
+
+     // target window for the history (optional)
+     window,
+
+     // history item
      { label  : 'Change tabbar position',
-       onUndo : function() { ... },
-       onRedo : function() { ... } },
-     window
+       onUndo : function() { MyService.myProp = oldValue; },
+       onRedo : function() { MyService.myProp = newValue; } }
    );
    OH.undo('MyAddonFeature', window);
    OH.redo('MyAddonFeature', window);
 
    // global history (not associated to window)
-   OH.addEntry(
+   OH.doUndoableTask(
+     function() { ... }, // task
      'MyAddonFeature',
      { ... }
    );
    OH.undo('MyAddonFeature');
 
    // anonymous, window specific
-   OH.addEntry({ ... }, window);
+   OH.doUndoableTask(function() { ... }, { ... }, window);
    OH.undo(window);
 
    // anonymous, global
-   OH.addEntry({ ... });
+   OH.doUndoableTask(function() { ... }, { ... });
    OH.undo();
 
    // When you want to use "window" object in the global history,
    // you should use the ID string instead of the "window" object
    // to reduce memory leak. For example...
-   OH.addEntry({
-     id : OH.getWindowId(targetWindow),
-     onUndo : function() {
-       var w = OH.getWindowById(this.id);
-       w.MyAddonService.undoSomething();
+   OH.doUndoableTask(
+     function() {
+       targetWindow.MyAddonService.myProp = newValue;
      },
-     onRedo : ...
-   });
+     {
+       id : OH.getWindowId(targetWindow),
+       onUndo : function() {
+         var w = OH.getWindowById(this.id);
+         w.MyAddonService.myProp = oldValue;
+       },
+       onRedo : ...
+     }
+   );
 
    // enumerate history entries
    var history = OH.getHistory('MyAddonFeature', window); // options are same to undo/redo
@@ -56,7 +72,7 @@
    http://www.cozmixng.org/repos/piro/fx3-compatibility-lib/trunk/operationHistory.js
 */
 (function() {
-	const currentRevision = 3;
+	const currentRevision = 4;
 
 	if (!('piro.sakura.ne.jp' in window)) window['piro.sakura.ne.jp'] = {};
 
@@ -82,22 +98,44 @@
 		kMAX_ENTRIES : 999,
 		kWINDOW_ID : 'ui-operation-global-history-window-id',
 
+		doUndoableTask : function()
+		{
+			this.addEntry.apply(this, arguments);
+		},
+
 		addEntry : function()
 		{
-			if (this._doingUndo)
-				return;
-
 			var options = this._getOptionsFromArguments(arguments);
-
 			var history = options.history;
 			var entries = history.entries;
+			var error;
+			var wasInUndoableTask = history._inUndoableTask;
 
-			entries = entries.slice(0, history.index+1);
-			entries.push(options.data);
-			entries = entries.slice(-this.kMAX_ENTRIES);
+			if (!wasInUndoableTask)
+				history._inUndoableTask = true;
 
-			history.entries = entries;
-			history.index = entries.length-1;
+			try {
+				if (options.task)
+					options.task.call(this);
+			}
+			catch(e) {
+				error = e;
+			}
+
+			if (!wasInUndoableTask && !this._doingUndo) {
+				entries = entries.slice(0, history.index+1);
+				entries.push(options.data);
+				entries = entries.slice(-this.kMAX_ENTRIES);
+
+				history.entries = entries;
+				history.index = entries.length-1;
+			}
+
+			if (!wasInUndoableTask)
+				delete history._inUndoableTask;
+
+			if (error)
+				throw e;
 		},
 
 		getHistory : function()
@@ -255,16 +293,18 @@
 
 		_getOptionsFromArguments : function(aArguments)
 		{
-			var w = null, name, data = null;
+			var w = null, name, data = null, task = null;
 			Array.slice(aArguments).some(function(aArg) {
 				if (aArg instanceof Ci.nsIDOMWindow)
 					w = aArg;
 				else if (typeof aArg == 'string')
 					name = aArg;
+				else if (typeof aArg == 'function')
+					task = aArg;
 				else if (aArg)
 					data = aArg;
 
-				return (w && name && data);
+				return (w && name && data && task);
 			});
 
 			if (!name)
@@ -289,7 +329,8 @@
 				window   : w,
 				windowId : windowId,
 				data     : data,
-				history  : this._tables[tableName]
+				history  : this._tables[tableName],
+				task     : task
 			};
 		},
 
