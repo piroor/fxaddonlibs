@@ -155,9 +155,9 @@
 
 			this._doingUndo = true;
 			var processed = false;
+			var error;
 			while (processed === false)
 			{
-				let error;
 				let data = history.entries[history.index--];
 				let f = this._getAvailableFunction(data.onUndo, data.onundo, data.undo);
 				let done = false;
@@ -177,7 +177,9 @@
 			}
 			this._doingUndo = false;
 
-			if (error) throw error;
+			if (error)
+				throw error;
+
 			return true;
 		},
 
@@ -190,9 +192,9 @@
 
 			this._doingUndo = true;
 			var processed = false;
+			var error;
 			while (processed === false)
 			{
-				let error;
 				let f = this._getAvailableFunction(data.onRedo, data.onredo, data.redo);
 				let done = false;
 				try {
@@ -211,7 +213,9 @@
 			}
 			this._doingUndo = false;
 
-			if (error) throw error;
+			if (error)
+				throw error;
+
 			return true;
 		},
 

@@ -53,7 +53,9 @@ function test_getWindowById()
 }
 
 
-function registerEntries()
+test_addEntry.setUp = windowSetUp;
+test_addEntry.tearDown = windowTearDown;
+function test_addEntry()
 {
 	var name = 'foobar';
 
@@ -77,21 +79,10 @@ function registerEntries()
 	sv.addEntry(name, { label : 'window, named 2' }, win);
 	sv.addEntry(name, { label : 'window, named 3' }, win);
 
-}
-
-test_addEntry.setUp = function() {
-	yield Do(windowSetUp());
-	registerEntries();
-};
-test_addEntry.tearDown = windowTearDown;
-function test_addEntry()
-{
-	var name = 'foobar';
-
-	function assertHistory(aItems, aCurrentIndex, aHistory)
+	function assertHistory(aLabels, aCurrentIndex, aHistory)
 	{
-		assert.equals(aItems.length, aHistory.entries.length);
-		assert.equals(aItems,
+		assert.equals(aLabels.length, aHistory.entries.length);
+		assert.equals(aLabels,
 		              aHistory.entries.map(function(aEntry) {
 		                return aEntry.label;
 		              }));
@@ -129,5 +120,30 @@ function test_addEntry()
 		2,
 		sv.getHistory(name, win)
 	);
+}
+
+
+function test_undoRedo()
+{
+	var log = [];
+
+	sv.addEntry({ label  : 'anonymous 1',
+	              onUndo : function() { log.push('u1'); },
+	              onRedo : function() { log.push('r1'); } });
+	sv.addEntry({ label : 'anonymous 2',
+	              onUndo : function() { log.push('u2'); },
+	              onRedo : function() { log.push('r2'); } });
+	sv.addEntry({ label : 'anonymous 3',
+	              onUndo : function() { log.push('u3'); },
+	              onRedo : function() { log.push('r3'); } });
+
+	sv.undo();
+	sv.undo();
+	sv.undo();
+	sv.redo();
+	sv.redo();
+	sv.undo();
+
+	assert.equals('u3,u2,u1,r1,r2,u2', log.join(','));
 }
 
