@@ -122,7 +122,7 @@
 				error = e;
 			}
 
-			if (!wasInUndoableTask && !this._doingUndo) {
+			if (!wasInUndoableTask && !this._doingUndo && options.data) {
 				entries = entries.slice(0, history.index+1);
 				entries.push(options.data);
 				entries = entries.slice(-this.kMAX_ENTRIES);
