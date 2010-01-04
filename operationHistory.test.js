@@ -205,6 +205,33 @@ function test_undoRedo()
 	assert.equals('u3,r3,u3,u2,u1,r1,r2,r3,u3,u2,u1,r1,r2,u4,r4,u4,u2,u1,r1,r2,r4', log.join(','));
 }
 
+function test_undoRedo_skip()
+{
+	var log = [];
+
+	sv.addEntry({ label  : 'anonymous 1',
+	              onUndo : function() { log.push('u1'); },
+	              onRedo : function() { log.push('r1'); return false; } });
+	sv.addEntry({ label : 'anonymous 2',
+	              onUndo : function() { log.push('u2'); return false; },
+	              onRedo : function() { log.push('r2'); } });
+
+	function assertHistory(aIndex, aCount)
+	{
+		var history = sv.getHistory();
+		assert.equals(aCount, history.entries.length, utils.inspect(history.entries));
+		assert.equals(aIndex, history.index);
+	}
+
+	assertHistory(1, 2);
+	sv.undo(); // u2, u1
+	assertHistory(0, 2);
+	sv.redo(); // r1, r2
+	assertHistory(1, 2);
+
+	assert.equals('u2,u1,r1,r2', log.join(','));
+}
+
 function test_doUndoableTask()
 {
 	sv.doUndoableTask(
@@ -226,4 +253,17 @@ function test_doUndoableTask()
 	var history = sv.getHistory();
 	assert.equals(1, history.entries.length, utils.inspect(history.entries));
 	assert.equals('entry 1', history.entries[0].label);
+}
+
+function test_doUndoableTask_autoRegisterRedo()
+{
+	var task = function() { var foo = 'bar'; };
+	sv.doUndoableTask(
+		task,
+		{ label  : 'entry 1',
+		  onUndo : function() { return true; } }
+	);
+
+	var history = sv.getHistory();
+	assert.equals(task, history.entries[0].onRedo);
 }
