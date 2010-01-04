@@ -137,13 +137,22 @@ function test_undoRedo()
 	              onUndo : function() { log.push('u3'); },
 	              onRedo : function() { log.push('r3'); } });
 
-	sv.undo();
-	sv.undo();
-	sv.undo();
-	sv.redo();
-	sv.redo();
-	sv.undo();
+	sv.undo(); // u3
+	sv.undo(); // u2
+	sv.undo(); // u1
+	sv.redo(); // r1
+	sv.redo(); // r2
+	sv.redo(); // r3
+	sv.redo(); // --
+	sv.redo(); // --
+	sv.undo(); // u3
+	sv.undo(); // u2
+	sv.undo(); // u1
+	sv.undo(); // --
+	sv.undo(); // --
+	sv.undo(); // --
+	sv.redo(); // r1
 
-	assert.equals('u3,u2,u1,r1,r2,u2', log.join(','));
+	assert.equals('u3,u2,u1,r1,r2,r3,u3,u2,u1,r1', log.join(','));
 }
 
