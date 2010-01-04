@@ -137,43 +137,72 @@ function test_undoRedo()
 	              onUndo : function() { log.push('u3'); },
 	              onRedo : function() { log.push('r3'); } });
 
-	function assertIndex(aIndex)
+	function assertHistory(aIndex, aCount)
 	{
-		assert.equals(aIndex, sv.getHistory().index);
+		var history = sv.getHistory();
+		assert.equals(aCount, history.entries.length, utils.inspect(history.entries));
+		assert.equals(aIndex, history.index);
 	}
 
-	assertIndex(2);
+	assertHistory(2, 3);
 	sv.undo(); // u3
-	assertIndex(1);
-	sv.undo(); // u2
-	assertIndex(0);
-	sv.undo(); // u1
-	assertIndex(0);
-	sv.redo(); // r1
-	assertIndex(1);
-	sv.redo(); // r2
-	assertIndex(2);
+	assertHistory(1, 3);
 	sv.redo(); // r3
-	assertIndex(2);
-	sv.redo(); // --
-	assertIndex(2);
-	sv.redo(); // --
-	assertIndex(2);
+	assertHistory(2, 3);
 	sv.undo(); // u3
-	assertIndex(1);
+	assertHistory(1, 3);
 	sv.undo(); // u2
-	assertIndex(0);
+	assertHistory(0, 3);
 	sv.undo(); // u1
-	assertIndex(0);
-	sv.undo(); // --
-	assertIndex(0);
-	sv.undo(); // --
-	assertIndex(0);
-	sv.undo(); // --
-	assertIndex(0);
+	assertHistory(0, 3);
 	sv.redo(); // r1
-	assertIndex(1);
+	assertHistory(0, 3);
+	sv.redo(); // r2
+	assertHistory(1, 3);
+	sv.redo(); // r3
+	assertHistory(2, 3);
+	sv.redo(); // --
+	assertHistory(2, 3);
+	sv.redo(); // --
+	assertHistory(2, 3);
+	sv.undo(); // u3
+	assertHistory(1, 3);
+	sv.undo(); // u2
+	assertHistory(0, 3);
+	sv.undo(); // u1
+	assertHistory(0, 3);
+	sv.undo(); // --
+	assertHistory(0, 3);
+	sv.undo(); // --
+	assertHistory(0, 3);
+	sv.undo(); // --
+	assertHistory(0, 3);
+	sv.redo(); // r1
+	assertHistory(0, 3);
+	sv.redo(); // r2
+	assertHistory(1, 3);
 
-	assert.equals('u3,u2,u1,r1,r2,r3,u3,u2,u1,r1', log.join(','));
+	sv.addEntry({ label : 'anonymous 4',
+	              onUndo : function() { log.push('u4'); },
+	              onRedo : function() { log.push('r4'); } });
+	assertHistory(2, 3);
+	sv.undo(); // u4
+	assertHistory(1, 3);
+	sv.redo(); // r4
+	assertHistory(2, 3);
+	sv.undo(); // u4
+	assertHistory(1, 3);
+	sv.undo(); // u2
+	assertHistory(0, 3);
+	sv.undo(); // u1
+	assertHistory(0, 3);
+	sv.redo(); // r1
+	assertHistory(0, 3);
+	sv.redo(); // r2
+	assertHistory(1, 3);
+	sv.redo(); // r4
+	assertHistory(2, 3);
+
+	assert.equals('u3,r3,u3,u2,u1,r1,r2,r3,u3,u2,u1,r1,r2,u4,r4,u4,u2,u1,r1,r2,r4', log.join(','));
 }
 
