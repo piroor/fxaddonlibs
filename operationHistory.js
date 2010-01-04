@@ -392,7 +392,8 @@
 
 		get WindowMediator() {
 			if (!this._WindowMediator) {
-				this._WindowMediator = Cc['@mozilla.org/appshell/window-mediator;1'].getService(Ci.nsIWindowMediator);
+				this._WindowMediator = Cc['@mozilla.org/appshell/window-mediator;1']
+										.getService(Ci.nsIWindowMediator);
 			}
 			return this._WindowMediator;
 		},
@@ -400,7 +401,8 @@
 
 		get SessionStore() { 
 			if (!this._SessionStore) {
-				this._SessionStore = Cc['@mozilla.org/browser/sessionstore;1'].getService(Ci.nsISessionStore);
+				this._SessionStore = Cc['@mozilla.org/browser/sessionstore;1']
+										.getService(Ci.nsISessionStore);
 			}
 			return this._SessionStore;
 		},

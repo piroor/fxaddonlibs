@@ -183,8 +183,8 @@ function test_undoRedo()
 	assertHistory(1, 3);
 
 	sv.addEntry({ label : 'anonymous 4',
-	              onUndo : function() { log.push('u4'); },
-	              onRedo : function() { log.push('r4'); } });
+	              onUndo : function() { log.push('u4'); sv.addEntry({ label: 'invalid/undo' }); },
+	              onRedo : function() { log.push('r4'); sv.addEntry({ label: 'invalid/redo' }); } });
 	assertHistory(2, 3);
 	sv.undo(); // u4
 	assertHistory(1, 3);
