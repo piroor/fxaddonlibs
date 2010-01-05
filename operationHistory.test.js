@@ -248,8 +248,14 @@ function test_doUndoableTask()
 					);
 				},
 				{ label  : 'entry 2',
-				  onUndo : function() { log.push('u2'); },
-				  onRedo : function() { log.push('r2'); } }
+				  onUndo : function(aInfo) {
+				    if (aInfo.level) return false;
+				    log.push('u2');
+				  },
+				  onRedo : function(aInfo) {
+				    if (aInfo.level) return false;
+				    log.push('r2');
+				  } }
 			);
 		},
 		{ label  : 'entry 1',
@@ -263,7 +269,7 @@ function test_doUndoableTask()
 
 	sv.undo();
 	sv.redo();
-	assert.equals('u1,u2,u3,r1,r2,r3', log.join(','));
+	assert.equals('u1,u3,r1,r3', log.join(','));
 }
 
 function test_doUndoableTask_autoRegisterRedo()
