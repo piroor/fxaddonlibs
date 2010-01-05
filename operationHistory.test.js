@@ -234,6 +234,7 @@ function test_undoRedo_skip()
 
 function test_doUndoableTask()
 {
+	var log = [];
 	sv.doUndoableTask(
 		function() {
 			sv.doUndoableTask(
@@ -241,18 +242,28 @@ function test_doUndoableTask()
 					sv.doUndoableTask(
 						function() {
 						},
-						{ label  : 'entry 3' }
+						{ label  : 'entry 3',
+						  onUndo : function() { log.push('u3'); },
+						  onRedo : function() { log.push('r3'); } }
 					);
 				},
-				{ label  : 'entry 2' }
+				{ label  : 'entry 2',
+				  onUndo : function() { log.push('u2'); },
+				  onRedo : function() { log.push('r2'); } }
 			);
 		},
-		{ label  : 'entry 1' }
+		{ label  : 'entry 1',
+		  onUndo : function() { log.push('u1'); },
+		  onRedo : function() { log.push('r1'); } }
 	);
 
 	var history = sv.getHistory();
 	assert.equals(1, history.entries.length, utils.inspect(history.entries));
 	assert.equals('entry 1', history.entries[0].label);
+
+	sv.undo();
+	sv.redo();
+	assert.equals('u1,u2,u3,r1,r2,r3', log.join(','));
 }
 
 function test_doUndoableTask_autoRegisterRedo()
