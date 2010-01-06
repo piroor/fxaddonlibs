@@ -1,5 +1,5 @@
 /*
- UI Operations Global Undo History Manager
+ UI Operations History Manager
 
  Usage:
    var OH = window['piro.sakura.ne.jp'].operationHistory;
@@ -74,7 +74,7 @@
    http://www.cozmixng.org/repos/piro/fx3-compatibility-lib/trunk/operationHistory.test.js
 */
 (function() {
-	const currentRevision = 17;
+	const currentRevision = 19;
 	const DEBUG = false;
 
 	if (!('piro.sakura.ne.jp' in window)) window['piro.sakura.ne.jp'] = {};
@@ -93,8 +93,8 @@
 		window['piro.sakura.ne.jp'].operationHistory.destroy();
 	}
 
-	var Cc = Components.classes;
-	var Ci = Components.interfaces;
+	const Cc = Components.classes;
+	const Ci = Components.interfaces;
 
 	function log() {
 		if (!DEBUG) return;
@@ -107,10 +107,8 @@
 	window['piro.sakura.ne.jp'].operationHistory = {
 		revision : currentRevision,
 
-		MAX_ENTRIES : 999,
 		WINDOW_ID : 'ui-operation-global-history-window-id',
 
-		// old name, for backward compatibility
 		addEntry : function()
 		{
 			this.doUndoableTask.apply(this, arguments);
@@ -121,7 +119,6 @@
 			var options = this._getOptionsFromArguments(arguments);
 			log('doUndoableTask start ('+options.name+' for '+options.windowId+')');
 			var history = options.history;
-
 
 			var entry = options.entry;
 			if (!this._doingUndo && entry) {
@@ -134,8 +131,7 @@
 			var currentLevel = history.addingEntryLevel;
 			history.addingEntryLevel++;
 
-			var firstContinuation;
-			var continuationCall = { called : false, allowed : false };
+			var continuationInfo = new ContinuationInfo();
 			var error;
 			try {
 				if (options.task)
@@ -147,14 +143,11 @@
 							done    : false,
 							manager : this,
 							getContinuation : function() {
-								let continuation = this.manager._getContinuation(
-										!firstContinuation && (currentLevel > 0) ? 'null' : 'undoable',
+								return this.manager._createContinuation(
+										!continuationInfo.created && (currentLevel > 0) ? 'null' : 'undoable',
 										options,
-										continuationCall
+										continuationInfo
 									);
-								if (!firstContinuation)
-									firstContinuation = continuation;
-								return continuation;
 							}
 						}
 					);
@@ -164,8 +157,8 @@
 				error = e;
 			}
 
-			continuationCall.allowed = true;
-			if (!firstContinuation || continuationCall.called) {
+			continuationInfo.allowed = true;
+			if (continuationInfo.done) {
 				history.addingEntryLevel--;
 				log('  => doUndoableTask finish');
 			}
@@ -185,16 +178,15 @@
 			var options = this._getOptionsFromArguments(arguments);
 			var history = options.history;
 			log('undo start ('+history.index+' / '+history.entries.length+', '+options.name+' for '+options.windowId+', '+this._doingUndo+')');
-			if (history.index < 0 || this._doingUndo)
+			if (!history.canUndo || this._doingUndo)
 				return false;
 
 			this._doingUndo = true;
 			var processed = false;
 			var error;
-			var firstContinuation;
-			var continuationCall = { called : false, allowed : false };
-			while (processed === false && history.index > -1)
-			{
+			var continuationInfo = new ContinuationInfo();
+
+			do {
 				let entries = history.currentEntries;
 				--history.index;
 				if (!entries.length) continue;
@@ -211,14 +203,11 @@
 									done    : processed && done,
 									manager : this,
 									getContinuation : function() {
-										continuation = this.manager._getContinuation(
-												firstContinuation ? 'null' : 'undo',
+										return this.manager._createContinuation(
+												continuationInfo.created ? 'null' : 'undo',
 												options,
-												continuationCall
+												continuationInfo
 											);
-										if (!firstContinuation)
-											firstContinuation = continuation;
-										return continuation;
 									}
 								};
 							let oneProcessed = f.call(aEntry, info);
@@ -237,8 +226,10 @@
 				}, this);
 				this._dispatchEvent('UIOperationGlobalHistoryUndo', options, entries[0], done);
 			}
-			continuationCall.allowed = true;
-			if (!firstContinuation || continuationCall.called) {
+			while (processed === false && history.canUndo);
+
+			continuationInfo.allowed = true;
+			if (continuationInfo.done) {
 				this._doingUndo = false;
 				log('  => undo finish');
 			}
@@ -255,15 +246,15 @@
 			var history = options.history;
 			var max = history.entries.length;
 			log('redo start ('+history.index+' / '+max+', '+options.name+' for '+options.windowId+', '+this._doingUndo+')');
-			if (history.index >= max || this._doingUndo)
+			if (!history.canRedo || this._doingUndo)
 				return false;
 
 			this._doingUndo = true;
 			var processed = false;
 			var error;
-			var firstContinuation;
-			var continuationCall = { called : false, allowed : false };
-			while (processed === false && history.index < max)
+			var continuationInfo = new ContinuationInfo();
+
+			while (processed === false && history.canRedo)
 			{
 				++history.index;
 				let entries = history.currentEntries;
@@ -282,14 +273,11 @@
 									done    : processed && done,
 									manager : this,
 									getContinuation : function() {
-										continuation = this.manager._getContinuation(
-												firstContinuation ? 'null' : 'redo',
+										return this.manager._createContinuation(
+												continuationInfo.created ? 'null' : 'redo',
 												options,
-												continuationCall
+												continuationInfo
 											);
-										if (!firstContinuation)
-											firstContinuation = continuation;
-										return continuation;
 									}
 								};
 							let oneProcessed = f.call(aEntry, info);
@@ -308,8 +296,9 @@
 				}, this);
 				this._dispatchEvent('UIOperationGlobalHistoryRedo', options, entries[0], done);
 			}
-			continuationCall.allowed = true;
-			if (!firstContinuation || continuationCall.called) {
+
+			continuationInfo.allowed = true;
+			if (continuationInfo.done) {
 				this._doingUndo = false;
 				log('  => redo finish');
 			}
@@ -365,7 +354,6 @@
 
 		/* PRIVATE METHODS */
 
-		_doingUndo : false,
 		_db : db,
 
 		initialized : false,
@@ -456,7 +444,7 @@
 			return this._db[uniqueName];
 		},
 
-		_getContinuation : function(aType, aOptions, aCall)
+		_createContinuation : function(aType, aOptions, aInfo)
 		{
 			var continuation;
 			var history = aOptions.history;
@@ -465,32 +453,35 @@
 			{
 				case 'undoable':
 					continuation = function() {
-						if (aCall.allowed)
+						if (aInfo.allowed)
 							history.addingEntryLevel--;
-						aCall.called = true;
+						aInfo.called = true;
 						log('  => doUndoableTask finish (delayed)');
 					};
 					self = null;
+					aInfo.created = true;
 					break;
 
 				case 'undo':
 					continuation = function() {
-						if (aCall.allowed)
+						if (aInfo.allowed)
 							self._doingUndo = false;
-						aCall.called = true;
+						aInfo.called = true;
 						log('  => undo finish (delayed)');
 					};
 					history = null;
+					aInfo.created = true;
 					break;
 
 				case 'redo':
 					continuation = function() {
-						if (aCall.allowed)
+						if (aInfo.allowed)
 							self._doingUndo = false;
-						aCall.called = true;
+						aInfo.called = true;
 						log('  => redo finish (delayed)');
 					};
 					history = null;
+					aInfo.created = true;
 					break;
 
 				case 'null':
@@ -498,7 +489,8 @@
 					};
 					history = null;
 					self = null;
-					aCall = null;
+					aInfo.created = true;
+					aInfo = null;
 					break;
 
 				default:
@@ -604,15 +596,52 @@
 
 	};
 
+	const Prefs = Cc['@mozilla.org/preferences;1']
+					.getService(Ci.nsIPrefBranch);
+	const PREF_PREFIX = 'extensions.UIOperationsHistoryManager@piro.sakura.ne.jp.';
+
 	function UIHistory(aName, aWindow, aId)
 	{
 		this.name     = aName;
 		this.window   = aWindow;
 		this.windowId = aId;
+
+		try {
+			var max = Prefs.getIntPref(this.maxPref);
+			this._max = Math.max(0, Math.min(this.MAX_ENTRIES, max));
+		}
+		catch(e) {
+			this._max = this.MAX_ENTRIES;
+		}
+
 		this.clear();
 	}
 	UIHistory.prototype = {
+
 		MAX_ENTRIES : 999,
+		get maxPref()
+		{
+			return PREF_PREFIX+escape(this.name)+'.max.'+(this.window ? 'window' : 'global');
+		},
+		get max()
+		{
+			return this._max;
+		},
+		set max(aValue)
+		{
+			var max = parseInt(aValue);
+			if (!isNaN(max)) {
+				max = Math.max(0, Math.min(this.MAX_ENTRIES, max));
+				try {
+					if (max != this._max)
+						Prefs.setIntPref(this.maxPref, max);
+				}
+				catch(e) {
+				}
+				this._max = max;
+			}
+			return aValue;
+		},
 
 		clear : function()
 		{
@@ -638,13 +667,22 @@
 		{
 			this.entries = this.entries.slice(0, this.index+1);
 			this.entries.push(aEntry);
-			this.entries = this.entries.slice(-this.MAX_ENTRIES);
+			this.entries = this.entries.slice(-this.max);
 
 			this.metaData = this.metaData.slice(0, this.index+1);
 			this.metaData.push(new UIHistoryMetaData());
-			this.metaData = this.metaData.slice(-this.MAX_ENTRIES);
+			this.metaData = this.metaData.slice(-this.max);
 
 			this.index = this.entries.length;
+		},
+
+		get canUndo()
+		{
+			return this.index >= 0;
+		},
+		get canRedo()
+		{
+			return this.index < this.entries.length;
 		},
 
 		get currentEntry()
@@ -698,6 +736,25 @@
 			this.children = [];
 		}
 	};
+
+	function ContinuationInfo()
+	{
+		this.called  = false;
+		this.allowed = false;
+		this.created = false;
+	}
+	ContinuationInfo.prototype = {
+		get done()
+		{
+			return !this.created || this.called;
+		}
+	};
+
+	// export
+	window['piro.sakura.ne.jp'].operationHistory.UIHistory         = UIHistory;
+	window['piro.sakura.ne.jp'].operationHistory.UIHistoryProxy    = UIHistoryProxy;
+	window['piro.sakura.ne.jp'].operationHistory.UIHistoryMetaData = UIHistoryMetaData;
+	window['piro.sakura.ne.jp'].operationHistory.ContinuationInfo  = ContinuationInfo;
 
 	window['piro.sakura.ne.jp'].operationHistory.init();
 })();
