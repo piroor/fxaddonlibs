@@ -74,7 +74,7 @@
    http://www.cozmixng.org/repos/piro/fx3-compatibility-lib/trunk/operationHistory.test.js
 */
 (function() {
-	const currentRevision = 20;
+	const currentRevision = 21;
 	const DEBUG = false;
 
 	if (!('piro.sakura.ne.jp' in window)) window['piro.sakura.ne.jp'] = {};
@@ -128,8 +128,9 @@
 				history.addEntry(entry);
 			}
 
-			var currentLevel = history.addingEntryLevel;
-			history.addingEntryLevel++;
+			var inAnotherOperation = history.inOperation;
+			if (!inAnotherOperation)
+				history.inOperation = true;
 
 			var continuationInfo = new ContinuationInfo();
 			var error;
@@ -144,7 +145,7 @@
 							manager : this,
 							getContinuation : function() {
 								return this.manager._createContinuation(
-										!continuationInfo.created && (currentLevel > 0) ? 'null' : 'undoable',
+										!continuationInfo.created && inAnotherOperation ? 'null' : 'undoable',
 										options,
 										continuationInfo
 									);
@@ -159,8 +160,9 @@
 
 			continuationInfo.allowed = true;
 			if (continuationInfo.done) {
-				history.addingEntryLevel--;
-				log('  => doUndoableTask finish');
+				if (!inAnotherOperation)
+					history.inOperation = false;
+				log('  => doUndoableTask finish / in operation : '+history.inOperation);
 			}
 
 			if (error)
@@ -503,9 +505,9 @@
 				case 'undoable':
 					continuation = function() {
 						if (aInfo.allowed)
-							history.addingEntryLevel--;
+							history.inOperation = false;
 						aInfo.called = true;
-						log('  => doUndoableTask finish (delayed)');
+						log('  => doUndoableTask finish (delayed) / in operation : '+history.inOperation+' / '+aInfo.allowed);
 					};
 					self = null;
 					aInfo.created = true;
@@ -697,13 +699,13 @@
 			this.entries  = [];
 			this.metaData = [];
 			this.index    = -1;
-			this.addingEntryLevel = 0;
+			this.inOperation = false;
 		},
 
 		addEntry : function(aEntry)
 		{
-			log('UIHistory::addEntry / register new entry to history\n  '+aEntry.label);
-			if (this.addingEntryLevel > 0) {
+			log('UIHistory::addEntry / register new entry to history\n  '+aEntry.label+'\n  in operation : '+this.inOperation);
+			if (this.inOperation) {
 				this.lastMetaData.children.push(aEntry);
 				log(' => child level ('+(this.lastMetaData.children.length-1)+')');
 			}
