@@ -258,14 +258,14 @@ function test_undoRedo_continuation()
 	                var continuation = aInfo.getContinuation();
 	                window.setTimeout(function() {
 	                  continuation();
-	                }, 500);
+	                }, 300);
 	              },
 	              onRedo : function(aInfo) {
 	                log.push('r2');
 	                var continuation = aInfo.getContinuation();
 	                window.setTimeout(function() {
 	                  continuation();
-	                }, 500);
+	                }, 300);
 	              }
 	            });
 
@@ -291,7 +291,7 @@ function test_undoRedo_continuation()
 function test_doUndoableTask()
 {
 	var log = [];
-	sv.doUndoableTask(
+	var info = sv.doUndoableTask(
 		function() {
 			sv.doUndoableTask(
 				function() {
@@ -332,6 +332,7 @@ function test_doUndoableTask()
 		    log.push('r0');
 		  } }
 	);
+	assert.isTrue(info.done);
 
 	var history = sv.getHistory();
 	assert.equals(1, history.entries.length, utils.inspect(history.entries));
@@ -353,6 +354,76 @@ function test_doUndoableTask_autoRegisterRedo()
 
 	var history = sv.getHistory();
 	assert.equals(task, history.entries[0].onRedo);
+}
+
+function test_doUndoableTask_continuation()
+{
+	var log = [];
+	var info;
+
+	info = sv.doUndoableTask(
+		function(aInfo) {
+			var continuation = aInfo.getContinuation();
+			sv.doUndoableTask(
+				function(aInfo) {
+					sv.doUndoableTask(
+						function(aInfo) {
+						},
+						{ label  : 'entry 02',
+						  onUndo : function(aInfo) { log.push('u02'); },
+						  onRedo : function(aInfo) { log.push('r02'); } }
+					);
+				},
+				{ label  : 'entry 01',
+				  onUndo : function(aInfo) { log.push('u01'); },
+				  onRedo : function(aInfo) { log.push('r01'); } }
+			);
+			window.setTimeout(function() {
+			  continuation();
+			}, 300);
+		},
+		{ label  : 'entry 00',
+		  onUndo : function(aInfo) { log.push('u00'); },
+		  onRedo : function(aInfo) { log.push('r00'); } }
+	);
+	assert.isFalse(info.done);
+	yield 600;
+	assert.isTrue(info.done);
+
+	info = sv.doUndoableTask(
+		function(aInfo) {
+			sv.doUndoableTask(
+				function(aInfo) {
+					var continuation = aInfo.getContinuation();
+					sv.doUndoableTask(
+						function(aInfo) {
+						},
+						{ label  : 'entry 12',
+						  onUndo : function(aInfo) { log.push('u12'); },
+						  onRedo : function(aInfo) { log.push('r12'); } }
+					);
+					window.setTimeout(function() {
+					  continuation();
+					}, 300);
+				},
+				{ label  : 'entry 11',
+				  onUndo : function(aInfo) { log.push('u11'); },
+				  onRedo : function(aInfo) { log.push('r11'); } }
+			);
+		},
+		{ label  : 'entry 10',
+		  onUndo : function(aInfo) { log.push('u10'); },
+		  onRedo : function(aInfo) { log.push('r10'); } }
+	);
+	assert.isFalse(info.done);
+	yield 600;
+	assert.isTrue(info.done);
+
+	sv.undo();
+	sv.undo();
+	sv.redo();
+	sv.redo();
+	assert.equals('u10,u11,u12,u00,u01,u02,r00,r01,r02,r10,r11,r12', log.join(','));
 }
 
 
