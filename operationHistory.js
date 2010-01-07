@@ -107,12 +107,21 @@
 	catch(e) {
 	}
 
-	function log() {
+	const oneIndent = '   ';
+	function log(aString, aLevel) {
 		if (!DEBUG) return;
+		if (aLevel) {
+			let indent = '';
+			for (let i = 0; i < aLevel; i++)
+			{
+				indent += oneIndent;
+			}
+			aString = aString.replace(/^/g, indent);
+		}
 		Cc['@mozilla.org/fuel/application;1']
 			.getService(Ci.fuelIApplication)
 			.console
-			.log(Array.slice(arguments).join('\n'));
+			.log(aString);
 	}
 
 	window['piro.sakura.ne.jp'].operationHistory = {
@@ -128,8 +137,8 @@
 		doUndoableTask : function()
 		{
 			var options = this._getOptionsFromArguments(arguments);
-			log('doUndoableTask start ('+options.name+' for '+options.windowId+')');
 			var history = options.history;
+			log('doUndoableTask start ('+options.name+' for '+options.windowId+')', history.inOperationCount);
 
 			var entry = options.entry;
 			if (!this._doingUndo && entry) {
@@ -165,13 +174,13 @@
 					);
 			}
 			catch(e) {
-				log(e);
+				log(e, history.inOperationCount);
 				error = e;
 			}
 
 			if (!continuationInfo.shouldWait) {
 				history.inOperation = false;
-				log('  => doUndoableTask finish / in operation : '+history.inOperation);
+				log('  => doUndoableTask finish / in operation : '+history.inOperation, history.inOperationCount);
 				// wait for all child processes
 				if (history.inOperation)
 					continuationInfo = {
@@ -213,10 +222,10 @@
 				let entries = history.currentEntries;
 				--history.index;
 				if (!entries.length) continue;
-				log('  '+(history.index+1)+' '+entries[0].label);
+				log((history.index+1)+' '+entries[0].label, 1);
 				let done = false;
 				entries.forEach(function(aEntry, aIndex) {
-					log('    level '+(aIndex)+' '+aEntry.label);
+					log('level '+(aIndex)+' '+aEntry.label, 2);
 					let f = this._getAvailableFunction(aEntry.onUndo, aEntry.onundo, aEntry.undo);
 					try {
 						if (f) {
@@ -243,7 +252,7 @@
 						}
 					}
 					catch(e) {
-						log(e);
+						log(e, 2);
 						error = e;
 					}
 				}, this);
@@ -284,10 +293,10 @@
 				++history.index;
 				let entries = history.currentEntries;
 				if (!entries.length) continue;
-				log('  '+(history.index)+' '+entries[0].label);
+				log((history.index)+' '+entries[0].label, 1);
 				let done = false;
 				entries.forEach(function(aEntry, aIndex) {
-					log('    level '+(aIndex)+' '+aEntry.label);
+					log('level '+(aIndex)+' '+aEntry.label, 2);
 					let f = this._getAvailableFunction(aEntry.onRedo, aEntry.onredo, aEntry.redo);
 					let done = false;
 					try {
@@ -315,7 +324,7 @@
 						}
 					}
 					catch(e) {
-						log(e);
+						log(e, 2);
 						error = e;
 					}
 				}, this);
@@ -539,7 +548,7 @@
 								aInfo.done = true;
 						}
 						aInfo.called = true;
-						log('  => doUndoableTask finish (delayed) / in operation : '+history.inOperationCount+' / '+aInfo.allowed);
+						log('  => doUndoableTask finish (delayed) / in operation : '+history.inOperationCount+' / '+aInfo.allowed, history.inOperationCount);
 					};
 					self = null;
 					aInfo.created = true;
@@ -746,14 +755,14 @@
 
 		addEntry : function(aEntry)
 		{
-			log('UIHistory::addEntry / register new entry to history\n  '+aEntry.label+'\n  in operation : '+this.inOperationCount);
+			log('UIHistory::addEntry / register new entry to history\n  '+aEntry.label+'\n  in operation : '+this.inOperationCount, this.inOperationCount);
 			if (this.inOperation) {
 				this.lastMetaData.children.push(aEntry);
-				log(' => child level ('+(this.lastMetaData.children.length-1)+')');
+				log(' => child level ('+(this.lastMetaData.children.length-1)+')', this.inOperationCount);
 			}
 			else {
 				this._addNewEntry(aEntry);
-				log(' => top level ('+(this.entries.length-1)+')');
+				log(' => top level ('+(this.entries.length-1)+')', this.inOperationCount);
 			}
 		},
 		_addNewEntry : function(aEntry)
