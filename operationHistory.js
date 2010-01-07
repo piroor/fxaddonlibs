@@ -117,7 +117,7 @@
 			{
 				indent += oneIndent;
 			}
-			aString = aString.replace(/^/g, indent);
+			aString = aString.replace(/^/gm, indent);
 		}
 		Cc['@mozilla.org/fuel/application;1']
 			.getService(Ci.fuelIApplication)
