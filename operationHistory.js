@@ -74,7 +74,7 @@
    http://www.cozmixng.org/repos/piro/fx3-compatibility-lib/trunk/operationHistory.test.js
 */
 (function() {
-	const currentRevision = 21;
+	const currentRevision = 22;
 	const DEBUG = false;
 
 	if (!('piro.sakura.ne.jp' in window)) window['piro.sakura.ne.jp'] = {};
@@ -95,6 +95,17 @@
 
 	const Cc = Components.classes;
 	const Ci = Components.interfaces;
+
+	const PREF_PREFIX = 'extensions.UIOperationsHistoryManager@piro.sakura.ne.jp.';
+
+	const Prefs = Cc['@mozilla.org/preferences;1']
+					.getService(Ci.nsIPrefBranch);
+
+	try {
+		DEBUG = Prefs.getBoolPref(PREF_PREFIX+'debug');
+	}
+	catch(e) {
+	}
 
 	function log() {
 		if (!DEBUG) return;
@@ -320,8 +331,10 @@
 			var index = Math.max(0, Math.min(history.entries.length-1, options.index));
 			var current = history.index;
 
-			if (index == current) return;
+			if (index == current)
+				return { done : true };
 
+			var selfInfo = { done : false };
 			var self = this;
 			var iterator = (function() {
 					while (true)
@@ -350,9 +363,12 @@
 						iterator.next();
 					}
 					catch(e) {
+						selfInfo.done = true;
 						window.clearInterval(timer);
 					}
 				}, 10);
+
+			return selfInfo;
 		},
 
 		getWindowId : function(aWindow, aDefaultId)
@@ -646,10 +662,6 @@
 		}
 
 	};
-
-	const Prefs = Cc['@mozilla.org/preferences;1']
-					.getService(Ci.nsIPrefBranch);
-	const PREF_PREFIX = 'extensions.UIOperationsHistoryManager@piro.sakura.ne.jp.';
 
 	function UIHistory(aName, aWindow, aId)
 	{
