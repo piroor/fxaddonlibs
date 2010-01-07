@@ -133,17 +133,40 @@ function test_undoRedo_simple()
 {
 	var log = [];
 
+	assert.isFalse(sv.isUndoing());
+	assert.isFalse(sv.isRedoing());
+
 	sv.addEntry({ label  : 'anonymous 1',
-	              onUndo : function() { log.push('u1'); },
-	              onRedo : function() { log.push('r1'); } });
+	              onUndo : function() {
+	                log.push('u1');
+	                assert.isTrue(sv.isUndoing());
+	                assert.isFalse(sv.isRedoing());
+	              },
+	              onRedo : function() {
+	                log.push('r1');
+	                assert.isFalse(sv.isUndoing());
+	                assert.isTrue(sv.isRedoing());
+	              } });
 	sv.addEntry({ label : 'anonymous 2',
-	              onUndo : function() { log.push('u2'); },
-	              onRedo : function() { log.push('r2'); } });
+	              onUndo : function() {
+	                log.push('u2');
+	                assert.isTrue(sv.isUndoing());
+	                assert.isFalse(sv.isRedoing());
+	              },
+	              onRedo : function() {
+	                log.push('r2');
+	                assert.isFalse(sv.isUndoing());
+	                assert.isTrue(sv.isRedoing());
+	              } });
 
 	assertHistoryCount(1, 2);
 	assert.isTrue(sv.undo().done); // u2
+	assert.isFalse(sv.isUndoing());
+	assert.isFalse(sv.isRedoing());
 	assertHistoryCount(0, 2);
 	assert.isTrue(sv.redo().done); // r2
+	assert.isFalse(sv.isUndoing());
+	assert.isFalse(sv.isRedoing());
 
 	assert.equals('u2,r2', log.join(','));
 }
@@ -276,14 +299,22 @@ function test_undoRedo_continuation()
 	info = sv.undo(); // u2
 	assertHistoryCount(0, 2);
 	assert.isFalse(info.done);
+	assert.isTrue(sv.isUndoing());
+	assert.isFalse(sv.isRedoing());
 	yield 600;
 	assert.isTrue(info.done);
+	assert.isFalse(sv.isUndoing());
+	assert.isFalse(sv.isRedoing());
 
 	info = sv.redo(); // r2
 	assertHistoryCount(1, 2);
 	assert.isFalse(info.done);
+	assert.isFalse(sv.isUndoing());
+	assert.isTrue(sv.isRedoing());
 	yield 600;
 	assert.isTrue(info.done);
+	assert.isFalse(sv.isUndoing());
+	assert.isFalse(sv.isRedoing());
 
 	assert.equals('u2,r2', log.join(','));
 }
