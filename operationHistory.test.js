@@ -687,19 +687,20 @@ function test_UIHistoryProxy_index()
 			entries : [0, 1, 2],
 			index   : 0
 		};
+	var proxy = new sv.UIHistoryProxy(history);
 
 	history.index = 0;
-	assert.equals(0, (new sv.UIHistoryProxy(history)).index);
+	assert.equals(0, proxy.index);
 	history.index = -1;
-	assert.equals(0, (new sv.UIHistoryProxy(history)).index);
+	assert.equals(0, proxy.index);
 	history.index = -10;
-	assert.equals(0, (new sv.UIHistoryProxy(history)).index);
+	assert.equals(0, proxy.index);
 	history.index = 2;
-	assert.equals(2, (new sv.UIHistoryProxy(history)).index);
+	assert.equals(2, proxy.index);
 	history.index = 3;
-	assert.equals(2, (new sv.UIHistoryProxy(history)).index);
+	assert.equals(2, proxy.index);
 	history.index = 10;
-	assert.equals(2, (new sv.UIHistoryProxy(history)).index);
+	assert.equals(2, proxy.index);
 }
 
 
