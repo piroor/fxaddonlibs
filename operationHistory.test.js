@@ -122,7 +122,33 @@ function test_addEntry()
 	);
 }
 
-function test_undoRedo()
+function assertHistoryCount(aIndex, aCount)
+{
+	var history = sv.getHistory();
+	assert.equals(aCount, history.entries.length, utils.inspect(history.entries));
+	assert.equals(aIndex, history.index);
+}
+
+function test_undoRedo_simple()
+{
+	var log = [];
+
+	sv.addEntry({ label  : 'anonymous 1',
+	              onUndo : function() { log.push('u1'); },
+	              onRedo : function() { log.push('r1'); } });
+	sv.addEntry({ label : 'anonymous 2',
+	              onUndo : function() { log.push('u2'); },
+	              onRedo : function() { log.push('r2'); } });
+
+	assertHistoryCount(1, 2);
+	assert.isTrue(sv.undo().done); // u2
+	assertHistoryCount(0, 2);
+	assert.isTrue(sv.redo().done); // r2
+
+	assert.equals('u2,r2', log.join(','));
+}
+
+function test_undoRedo_complex()
 {
 	var log = [];
 
@@ -136,71 +162,64 @@ function test_undoRedo()
 	              onUndo : function() { log.push('u3'); sv.undo(); },
 	              onRedo : function() { log.push('r3'); sv.redo(); } });
 
-	function assertHistory(aIndex, aCount)
-	{
-		var history = sv.getHistory();
-		assert.equals(aCount, history.entries.length, utils.inspect(history.entries));
-		assert.equals(aIndex, history.index);
-	}
-
-	assertHistory(2, 3);
+	assertHistoryCount(2, 3);
 	sv.undo(); // u3
-	assertHistory(1, 3);
+	assertHistoryCount(1, 3);
 	sv.redo(); // r3
-	assertHistory(2, 3);
+	assertHistoryCount(2, 3);
 	sv.undo(); // u3
-	assertHistory(1, 3);
+	assertHistoryCount(1, 3);
 	sv.undo(); // u2
-	assertHistory(0, 3);
+	assertHistoryCount(0, 3);
 	sv.undo(); // u1
-	assertHistory(0, 3);
+	assertHistoryCount(0, 3);
 	sv.redo(); // r1
-	assertHistory(0, 3);
+	assertHistoryCount(0, 3);
 	sv.redo(); // r2
-	assertHistory(1, 3);
+	assertHistoryCount(1, 3);
 	sv.redo(); // r3
-	assertHistory(2, 3);
+	assertHistoryCount(2, 3);
 	sv.redo(); // --
-	assertHistory(2, 3);
+	assertHistoryCount(2, 3);
 	sv.redo(); // --
-	assertHistory(2, 3);
+	assertHistoryCount(2, 3);
 	sv.undo(); // u3
-	assertHistory(1, 3);
+	assertHistoryCount(1, 3);
 	sv.undo(); // u2
-	assertHistory(0, 3);
+	assertHistoryCount(0, 3);
 	sv.undo(); // u1
-	assertHistory(0, 3);
+	assertHistoryCount(0, 3);
 	sv.undo(); // --
-	assertHistory(0, 3);
+	assertHistoryCount(0, 3);
 	sv.undo(); // --
-	assertHistory(0, 3);
+	assertHistoryCount(0, 3);
 	sv.undo(); // --
-	assertHistory(0, 3);
+	assertHistoryCount(0, 3);
 	sv.redo(); // r1
-	assertHistory(0, 3);
+	assertHistoryCount(0, 3);
 	sv.redo(); // r2
-	assertHistory(1, 3);
+	assertHistoryCount(1, 3);
 
 	sv.addEntry({ label : 'anonymous 4',
 	              onUndo : function() { log.push('u4'); sv.addEntry({ label: 'invalid/undo' }); },
 	              onRedo : function() { log.push('r4'); sv.addEntry({ label: 'invalid/redo' }); } });
-	assertHistory(2, 3);
+	assertHistoryCount(2, 3);
 	sv.undo(); // u4
-	assertHistory(1, 3);
+	assertHistoryCount(1, 3);
 	sv.redo(); // r4
-	assertHistory(2, 3);
+	assertHistoryCount(2, 3);
 	sv.undo(); // u4
-	assertHistory(1, 3);
+	assertHistoryCount(1, 3);
 	sv.undo(); // u2
-	assertHistory(0, 3);
+	assertHistoryCount(0, 3);
 	sv.undo(); // u1
-	assertHistory(0, 3);
+	assertHistoryCount(0, 3);
 	sv.redo(); // r1
-	assertHistory(0, 3);
+	assertHistoryCount(0, 3);
 	sv.redo(); // r2
-	assertHistory(1, 3);
+	assertHistoryCount(1, 3);
 	sv.redo(); // r4
-	assertHistory(2, 3);
+	assertHistoryCount(2, 3);
 
 	assert.equals('u3,r3,u3,u2,u1,r1,r2,r3,u3,u2,u1,r1,r2,u4,r4,u4,u2,u1,r1,r2,r4', log.join(','));
 }
@@ -216,20 +235,57 @@ function test_undoRedo_skip()
 	              onUndo : function() { log.push('u2'); return false; },
 	              onRedo : function() { log.push('r2'); } });
 
-	function assertHistory(aIndex, aCount)
-	{
-		var history = sv.getHistory();
-		assert.equals(aCount, history.entries.length, utils.inspect(history.entries));
-		assert.equals(aIndex, history.index);
-	}
-
-	assertHistory(1, 2);
+	assertHistoryCount(1, 2);
 	sv.undo(); // u2, u1
-	assertHistory(0, 2);
+	assertHistoryCount(0, 2);
 	sv.redo(); // r1, r2
-	assertHistory(1, 2);
+	assertHistoryCount(1, 2);
 
 	assert.equals('u2,u1,r1,r2', log.join(','));
+}
+
+function test_undoRedo_continuation()
+{
+	var log = [];
+
+	sv.addEntry({ label  : 'anonymous 1',
+	              onUndo : function() { log.push('u1'); },
+	              onRedo : function() { log.push('r1'); } });
+	sv.addEntry({
+	              label  : 'anonymous 2',
+	              onUndo : function(aInfo) {
+	                log.push('u2');
+	                var continuation = aInfo.getContinuation();
+	                window.setTimeout(function() {
+	                  continuation();
+	                }, 500);
+	              },
+	              onRedo : function(aInfo) {
+	                log.push('r2');
+	                var continuation = aInfo.getContinuation();
+	                window.setTimeout(function() {
+	                  continuation();
+	                }, 500);
+	              }
+	            });
+
+	assertHistoryCount(1, 2);
+
+	var info;
+
+	info = sv.undo(); // u2
+	assertHistoryCount(0, 2);
+	assert.isFalse(info.done);
+	yield 600;
+	assert.isTrue(info.done);
+
+	info = sv.redo(); // r2
+	assertHistoryCount(1, 2);
+	assert.isFalse(info.done);
+	yield 600;
+	assert.isTrue(info.done);
+
+	assert.equals('u2,r2', log.join(','));
 }
 
 function test_doUndoableTask()
@@ -242,34 +298,48 @@ function test_doUndoableTask()
 					sv.doUndoableTask(
 						function() {
 						},
-						{ label  : 'entry 3',
-						  onUndo : function() { log.push('u3'); },
-						  onRedo : function() { log.push('r3'); } }
+						{ label  : 'entry 2',
+						  onUndo : function(aInfo) {
+						    log.push(aInfo.level);
+						    log.push('u2');
+						  },
+						  onRedo : function(aInfo) {
+						    log.push(aInfo.level);
+						    log.push('r2');
+						  } }
 					);
 				},
-				{ label  : 'entry 2',
+				{ label  : 'entry 1',
 				  onUndo : function(aInfo) {
+				    log.push(aInfo.level);
 				    if (aInfo.level) return false;
-				    log.push('u2');
+				    log.push('u1');
 				  },
 				  onRedo : function(aInfo) {
+				    log.push(aInfo.level);
 				    if (aInfo.level) return false;
-				    log.push('r2');
+				    log.push('r1');
 				  } }
 			);
 		},
-		{ label  : 'entry 1',
-		  onUndo : function() { log.push('u1'); },
-		  onRedo : function() { log.push('r1'); } }
+		{ label  : 'entry 0',
+		  onUndo : function(aInfo) {
+		    log.push(aInfo.level);
+		    log.push('u0');
+		  },
+		  onRedo : function(aInfo) {
+		    log.push(aInfo.level);
+		    log.push('r0');
+		  } }
 	);
 
 	var history = sv.getHistory();
 	assert.equals(1, history.entries.length, utils.inspect(history.entries));
-	assert.equals('entry 1', history.entries[0].label);
+	assert.equals('entry 0', history.entries[0].label);
 
 	sv.undo();
 	sv.redo();
-	assert.equals('u1,u3,r1,r3', log.join(','));
+	assert.equals('0,u0,1,2,u2,0,r0,1,2,r2', log.join(','));
 }
 
 function test_doUndoableTask_autoRegisterRedo()
