@@ -727,15 +727,15 @@ function test_ContinuationInfo_done()
 
 	info = new sv.ContinuationInfo();
 	info.done = false;
-	assert.isTrue(info.shouldWait);
 	assert.isFalse(info.done);
-	info.created = true;
-	assert.isTrue(info.shouldWait);
-	assert.isFalse(info.done);
-	info.called = true;
-	assert.isTrue(info.shouldWait);
-	assert.isFalse(info.done);
-	info.done = true;
 	assert.isFalse(info.shouldWait);
+	info.created = true;
+	assert.isFalse(info.done);
+	assert.isTrue(info.shouldWait);
+	info.called = true;
+	assert.isFalse(info.done);
+	assert.isFalse(info.shouldWait);
+	info.done = true;
 	assert.isTrue(info.done);
+	assert.isFalse(info.shouldWait);
 }

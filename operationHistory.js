@@ -172,8 +172,17 @@
 			if (!continuationInfo.shouldWait) {
 				history.inOperation = false;
 				log('  => doUndoableTask finish / in operation : '+history.inOperation);
+				// wait for all child processes
+				if (history.inOperation)
+					continuationInfo = {
+						get done() {
+							return !history.inOperation;
+						}
+					};
 			}
-			continuationInfo.allowed = true;
+			else {
+				continuationInfo.allowed = true;
+			}
 
 			if (error)
 				throw error;
@@ -246,7 +255,9 @@
 				this._doingUndo = false;
 				log('  => undo finish');
 			}
-			continuationInfo.allowed = true;
+			else {
+				continuationInfo.allowed = true;
+			}
 
 			if (error)
 				throw error;
@@ -315,7 +326,9 @@
 				this._doingUndo = false;
 				log('  => redo finish');
 			}
-			continuationInfo.allowed = true;
+			else {
+				continuationInfo.allowed = true;
+			}
 
 			if (error)
 				throw error;
@@ -717,7 +730,7 @@
 		{
 			if (aValue)
 				this.inOperationCount++;
-			else
+			else if (this.inOperationCount)
 				this.inOperationCount--;
 
 			return this.inOperationCount > 0;
@@ -827,9 +840,7 @@
 	ContinuationInfo.prototype = {
 		get shouldWait()
 		{
-			return this._done === null ?
-					(this.created && !this.called) :
-					!this._done ;
+			return this.created && !this.called;
 		},
 		get done()
 		{
