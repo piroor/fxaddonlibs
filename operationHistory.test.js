@@ -21,7 +21,7 @@ function setUp()
 		};
 	utils.include('operationHistory.js', namespace, 'Shift_JIS');
 	sv = namespace.window['piro.sakura.ne.jp'].operationHistory;
-	sv._tables = {};
+	sv._db = {};
 }
 
 function tearDown()
@@ -33,7 +33,7 @@ test_getWindowId.tearDown = windowTearDown;
 function test_getWindowId()
 {
 	var id = sv.getWindowId(win);
-	assert.isNotNull('', id);
+	assert.isNotNull(id);
 	assert.notEquals('', id);
 
 	var newId = sv.getWindowId(win);
@@ -283,4 +283,295 @@ function test_doUndoableTask_autoRegisterRedo()
 
 	var history = sv.getHistory();
 	assert.equals(task, history.entries[0].onRedo);
+}
+
+
+
+/* tests for internal classes */
+
+function test_UIHistory_init()
+{
+	var history = new sv.UIHistory('test', null, null);
+	assert.equals([], history.entries);
+	assert.equals([], history.metaData);
+	assert.equals(-1, history.index);
+	assert.isFalse(history.inOperation);
+}
+
+var testMaxPrefKeyGlobal = 'extensions.UIOperationsHistoryManager@piro.sakura.ne.jp.test.max.global';
+var testMaxPrefKeyWindow = 'extensions.UIOperationsHistoryManager@piro.sakura.ne.jp.test.max.window';
+test_UIHistory_max_global.setUp = test_UIHistory_max_window.setUp = function() {
+	utils.clearPref(testMaxPrefKeyGlobal);
+	utils.clearPref(testMaxPrefKeyWindow);
+	assert.isNull(utils.getPref(testMaxPrefKeyGlobal));
+	assert.isNull(utils.getPref(testMaxPrefKeyWindow));
+};
+test_UIHistory_max_global.tearDown = test_UIHistory_max_window.tearDown = function() {
+	utils.clearPref(testMaxPrefKeyGlobal);
+	utils.clearPref(testMaxPrefKeyWindow);
+};
+function test_UIHistory_max_global()
+{
+	var maxDefault = sv.UIHistory.prototype.MAX_ENTRIES;
+	var history;
+
+	history = new sv.UIHistory('test', null, null);
+	assert.equals(maxDefault, history.max);
+	assert.equals(testMaxPrefKeyGlobal, history.maxPref);
+	history.max = 10;
+	assert.equals(10, history.max);
+	assert.equals(10, utils.getPref(testMaxPrefKeyGlobal));
+	assert.isNull(utils.getPref(testMaxPrefKeyWindow));
+
+	history = new sv.UIHistory('test', null, null);
+	assert.equals(10, history.max);
+
+	history = new sv.UIHistory('test', window, 'test');
+	assert.equals(maxDefault, history.max);
+}
+function test_UIHistory_max_window()
+{
+	var maxDefault = sv.UIHistory.prototype.MAX_ENTRIES;
+	var history
+
+	history = new sv.UIHistory('test', window, 'test');
+	assert.equals(maxDefault, history.max);
+	assert.equals(testMaxPrefKeyWindow, history.maxPref);
+	history.max = 10;
+	assert.equals(10, history.max);
+	assert.isNull(utils.getPref(testMaxPrefKeyGlobal));
+	assert.equals(10, utils.getPref(testMaxPrefKeyWindow));
+
+	history = new sv.UIHistory('test', null, null);
+	assert.equals(maxDefault, history.max);
+
+	history = new sv.UIHistory('test', window, 'test');
+	assert.equals(10, history.max);
+}
+
+function test_UIHistory_addEntry()
+{
+	var history = new sv.UIHistory('test', null, null);
+	assert.equals([], history.entries);
+	assert.equals([], history.metaData);
+	assert.equals(-1, history.index);
+	assert.isFalse(history.inOperation);
+
+	history.addEntry(0);
+	history.addEntry(1);
+	history.addEntry(2);
+	assert.equals([0, 1, 2], history.entries);
+	assert.equals(3, history.metaData.length);
+	assert.equals([], history.metaData[0].children);
+	assert.equals([], history.metaData[1].children);
+	assert.equals([], history.metaData[2].children);
+	assert.equals(3, history.index);
+
+	history.inOperation = true;
+
+	history.addEntry(3);
+	history.addEntry(4);
+	history.addEntry(5);
+	assert.equals([0, 1, 2], history.entries);
+	assert.equals(3, history.metaData.length);
+	assert.equals([], history.metaData[0].children);
+	assert.equals([], history.metaData[1].children);
+	assert.equals([3, 4, 5], history.metaData[2].children);
+	assert.equals(3, history.index);
+
+	history.inOperation = false;
+
+	history.addEntry(6);
+	assert.equals([0, 1, 2, 6], history.entries);
+	assert.equals(4, history.metaData.length);
+	assert.equals(4, history.index);
+}
+
+function test_UIHistory_canUndoRedo()
+{
+	var history = new sv.UIHistory('test', null, null);
+
+	history.addEntry(0);
+	history.addEntry(1);
+	history.addEntry(2);
+	assert.isTrue(history.canUndo);
+	assert.isFalse(history.canRedo);
+	history.index = 4;
+	assert.isTrue(history.canUndo);
+	assert.isFalse(history.canRedo);
+	history.index = 10;
+	assert.isTrue(history.canUndo);
+	assert.isFalse(history.canRedo);
+
+	history.index = 0;
+	assert.isTrue(history.canUndo);
+	assert.isTrue(history.canRedo);
+	history.index = -1;
+	assert.isFalse(history.canUndo);
+	assert.isTrue(history.canRedo);
+	history.index = -10;
+	assert.isFalse(history.canUndo);
+	assert.isTrue(history.canRedo);
+
+	history.index = 1;
+	assert.isTrue(history.canUndo);
+	assert.isTrue(history.canRedo);
+}
+
+function test_UIHistory_currentLastEntry()
+{
+	var history = new sv.UIHistory('test', null, null);
+
+	history.addEntry('0');
+	history.addEntry('1');
+	history.addEntry('2');
+	assert.isNull(history.currentEntry);
+	assert.equals('2', history.lastEntry);
+	history.index = 2;
+	assert.equals('2', history.currentEntry);
+	assert.equals('2', history.lastEntry);
+	history.index = 4;
+	assert.isNull(history.currentEntry);
+	assert.equals('2', history.lastEntry);
+	history.index = 10;
+	assert.isNull(history.currentEntry);
+	assert.equals('2', history.lastEntry);
+
+	history.index = 0;
+	assert.equals('0', history.currentEntry);
+	assert.equals('2', history.lastEntry);
+	history.index = -1;
+	assert.isNull(history.currentEntry);
+	assert.equals('2', history.lastEntry);
+	history.index = -10;
+	assert.isNull(history.currentEntry);
+	assert.equals('2', history.lastEntry);
+
+	history.index = 1;
+	assert.equals('1', history.currentEntry);
+	assert.equals('2', history.lastEntry);
+}
+
+function test_UIHistory_currentLastMetaData()
+{
+	var history = new sv.UIHistory('test', null, null);
+
+	history.addEntry('0');
+	history.addEntry('1');
+	history.addEntry('2');
+	var metaData = history.metaData;
+	assert.isNull(history.currentMetaData);
+	assert.strictlyEquals(metaData[2], history.lastMetaData);
+	history.index = 2;
+	assert.strictlyEquals(metaData[2], history.currentMetaData);
+	assert.strictlyEquals(metaData[2], history.lastMetaData);
+	history.index = 4;
+	assert.isNull(history.currentMetaData);
+	assert.strictlyEquals(metaData[2], history.lastMetaData);
+	history.index = 10;
+	assert.isNull(history.currentMetaData);
+	assert.strictlyEquals(metaData[2], history.lastMetaData);
+
+	history.index = 0;
+	assert.strictlyEquals(metaData[0], history.currentMetaData);
+	assert.strictlyEquals(metaData[2], history.lastMetaData);
+	history.index = -1;
+	assert.isNull(history.currentMetaData);
+	assert.strictlyEquals(metaData[2], history.lastMetaData);
+	history.index = -10;
+	assert.isNull(history.currentMetaData);
+	assert.strictlyEquals(metaData[2], history.lastMetaData);
+
+	history.index = 1;
+	assert.strictlyEquals(metaData[1], history.currentMetaData);
+	assert.strictlyEquals(metaData[2], history.lastMetaData);
+}
+
+function test_UIHistory_currentLastEntries()
+{
+	var history = new sv.UIHistory('test', null, null);
+
+	history.addEntry('0');
+	history.inOperation = true;
+	history.addEntry('0.1');
+	history.addEntry('0.2');
+	history.inOperation = false;
+	history.addEntry('1');
+	history.inOperation = true;
+	history.addEntry('1.1');
+	history.addEntry('1.2');
+	history.inOperation = false;
+	history.addEntry('2');
+	history.inOperation = true;
+	history.addEntry('2.1');
+	history.addEntry('2.2');
+	history.inOperation = false;
+
+	assert.equals([], history.currentEntries);
+	assert.equals(['2', '2.1', '2.2'], history.lastEntries);
+	history.index = 2;
+	assert.equals(['2', '2.1', '2.2'], history.currentEntries);
+	assert.equals(['2', '2.1', '2.2'], history.lastEntries);
+	history.index = 4;
+	assert.equals([], history.currentEntries);
+	assert.equals(['2', '2.1', '2.2'], history.lastEntries);
+	history.index = 10;
+	assert.equals([], history.currentEntries);
+	assert.equals(['2', '2.1', '2.2'], history.lastEntries);
+
+	history.index = 0;
+	assert.equals(['0', '0.1', '0.2'], history.currentEntries);
+	assert.equals(['2', '2.1', '2.2'], history.lastEntries);
+	history.index = -1;
+	assert.equals([], history.currentEntries);
+	assert.equals(['2', '2.1', '2.2'], history.lastEntries);
+	history.index = -10;
+	assert.equals([], history.currentEntries);
+	assert.equals(['2', '2.1', '2.2'], history.lastEntries);
+
+	history.index = 1;
+	assert.equals(['1', '1.1', '1.2'], history.currentEntries);
+	assert.equals(['2', '2.1', '2.2'], history.lastEntries);
+}
+
+
+function test_UIHistoryProxy_index()
+{
+	var history = {
+			entries : [0, 1, 2],
+			index   : 0
+		};
+
+	history.index = 0;
+	assert.equals(0, (new sv.UIHistoryProxy(history)).index);
+	history.index = -1;
+	assert.equals(0, (new sv.UIHistoryProxy(history)).index);
+	history.index = -10;
+	assert.equals(0, (new sv.UIHistoryProxy(history)).index);
+	history.index = 2;
+	assert.equals(2, (new sv.UIHistoryProxy(history)).index);
+	history.index = 3;
+	assert.equals(2, (new sv.UIHistoryProxy(history)).index);
+	history.index = 10;
+	assert.equals(2, (new sv.UIHistoryProxy(history)).index);
+}
+
+
+function test_UIHistoryMetaData_children()
+{
+	var metaData = new sv.UIHistoryMetaData();
+
+	assert.equals([], metaData.children);
+}
+
+
+function test_ContinuationInfo_done()
+{
+	var info = new sv.ContinuationInfo();
+
+	assert.isTrue(info.done);
+	info.created = true;
+	assert.isFalse(info.done);
+	info.called = true;
+	assert.isTrue(info.done);
 }
