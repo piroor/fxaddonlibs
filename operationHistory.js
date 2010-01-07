@@ -74,8 +74,7 @@
    http://www.cozmixng.org/repos/piro/fx3-compatibility-lib/trunk/operationHistory.test.js
 */
 (function() {
-	const currentRevision = 24;
-	const DEBUG = false;
+	const currentRevision = 25;
 
 	if (!('piro.sakura.ne.jp' in window)) window['piro.sakura.ne.jp'] = {};
 
@@ -101,6 +100,7 @@
 	const Prefs = Cc['@mozilla.org/preferences;1']
 					.getService(Ci.nsIPrefBranch);
 
+	var DEBUG = false;
 	try {
 		DEBUG = Prefs.getBoolPref(PREF_PREFIX+'debug');
 	}
