@@ -74,7 +74,7 @@
    http://www.cozmixng.org/repos/piro/fx3-compatibility-lib/trunk/operationHistory.test.js
 */
 (function() {
-	const currentRevision = 22;
+	const currentRevision = 23;
 	const DEBUG = false;
 
 	if (!('piro.sakura.ne.jp' in window)) window['piro.sakura.ne.jp'] = {};
@@ -139,11 +139,11 @@
 				history.addEntry(entry);
 			}
 
-			var inAnotherOperation = history.inOperation;
-			if (!inAnotherOperation)
-				history.inOperation = true;
-
 			var continuationInfo = new ContinuationInfo();
+			if (history.inOperation)
+				continuationInfo.done = false;
+
+			history.inOperation = true;
 			var error;
 			try {
 				if (options.task)
@@ -156,7 +156,7 @@
 							manager : this,
 							getContinuation : function() {
 								return this.manager._createContinuation(
-										!continuationInfo.created && inAnotherOperation ? 'null' : 'undoable',
+										'undoable',
 										options,
 										continuationInfo
 									);
@@ -169,12 +169,11 @@
 				error = e;
 			}
 
-			continuationInfo.allowed = true;
-			if (continuationInfo.done) {
-				if (!inAnotherOperation)
-					history.inOperation = false;
+			if (!continuationInfo.shouldWait) {
+				history.inOperation = false;
 				log('  => doUndoableTask finish / in operation : '+history.inOperation);
 			}
+			continuationInfo.allowed = true;
 
 			if (error)
 				throw error;
@@ -243,11 +242,11 @@
 			}
 			while (processed === false && history.canUndo);
 
-			continuationInfo.allowed = true;
 			if (continuationInfo.done) {
 				this._doingUndo = false;
 				log('  => undo finish');
 			}
+			continuationInfo.allowed = true;
 
 			if (error)
 				throw error;
@@ -312,11 +311,11 @@
 				this._dispatchEvent('UIOperationGlobalHistoryRedo', options, entries[0], done);
 			}
 
-			continuationInfo.allowed = true;
 			if (continuationInfo.done) {
 				this._doingUndo = false;
 				log('  => redo finish');
 			}
+			continuationInfo.allowed = true;
 
 			if (error)
 				throw error;
@@ -519,11 +518,15 @@
 			switch (aType)
 			{
 				case 'undoable':
+					aInfo.done = false;
 					continuation = function() {
-						if (aInfo.allowed)
+						if (aInfo.allowed) {
 							history.inOperation = false;
+							if (!history.inOperation)
+								aInfo.done = true;
+						}
 						aInfo.called = true;
-						log('  => doUndoableTask finish (delayed) / in operation : '+history.inOperation+' / '+aInfo.allowed);
+						log('  => doUndoableTask finish (delayed) / in operation : '+history.inOperationCount+' / '+aInfo.allowed);
 					};
 					self = null;
 					aInfo.created = true;
@@ -706,17 +709,31 @@
 			return aValue;
 		},
 
+		get inOperation()
+		{
+			return this.inOperationCount > 0;
+		},
+		set inOperation(aValue)
+		{
+			if (aValue)
+				this.inOperationCount++;
+			else
+				this.inOperationCount--;
+
+			return this.inOperationCount > 0;
+		},
+
 		clear : function()
 		{
 			this.entries  = [];
 			this.metaData = [];
 			this.index    = -1;
-			this.inOperation = false;
+			this.inOperationCount = 0;
 		},
 
 		addEntry : function(aEntry)
 		{
-			log('UIHistory::addEntry / register new entry to history\n  '+aEntry.label+'\n  in operation : '+this.inOperation);
+			log('UIHistory::addEntry / register new entry to history\n  '+aEntry.label+'\n  in operation : '+this.inOperationCount);
 			if (this.inOperation) {
 				this.lastMetaData.children.push(aEntry);
 				log(' => child level ('+(this.lastMetaData.children.length-1)+')');
@@ -805,11 +822,25 @@
 		this.called  = false;
 		this.allowed = false;
 		this.created = false;
+		this._done   = null;
 	}
 	ContinuationInfo.prototype = {
+		get shouldWait()
+		{
+			return this._done === null ?
+					(this.created && !this.called) :
+					!this._done ;
+		},
 		get done()
 		{
-			return !this.created || this.called;
+			if (this._done !== null)
+				return this._done;
+			return !this.shouldWait;
+		},
+		set done(aValue)
+		{
+			this._done = aValue;
+			return aValue;
 		}
 	};
 

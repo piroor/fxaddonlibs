@@ -361,18 +361,20 @@ function test_doUndoableTask_continuation()
 	var log = [];
 	var info;
 
+	var history = sv.getHistory();
 	info = sv.doUndoableTask(
 		function(aInfo) {
 			var continuation = aInfo.getContinuation();
-			sv.doUndoableTask(
+			var info = sv.doUndoableTask(
 				function(aInfo) {
-					sv.doUndoableTask(
+					var info = sv.doUndoableTask(
 						function(aInfo) {
 						},
 						{ label  : 'entry 02',
 						  onUndo : function(aInfo) { log.push('u02'); },
 						  onRedo : function(aInfo) { log.push('r02'); } }
 					);
+					assert.isFalse(info.done);
 				},
 				{ label  : 'entry 01',
 				  onUndo : function(aInfo) { log.push('u01'); },
@@ -381,6 +383,7 @@ function test_doUndoableTask_continuation()
 			window.setTimeout(function() {
 			  continuation();
 			}, 300);
+			assert.isFalse(info.done);
 		},
 		{ label  : 'entry 00',
 		  onUndo : function(aInfo) { log.push('u00'); },
@@ -392,16 +395,17 @@ function test_doUndoableTask_continuation()
 
 	info = sv.doUndoableTask(
 		function(aInfo) {
-			sv.doUndoableTask(
+			var info = sv.doUndoableTask(
 				function(aInfo) {
 					var continuation = aInfo.getContinuation();
-					sv.doUndoableTask(
+					var info = sv.doUndoableTask(
 						function(aInfo) {
 						},
 						{ label  : 'entry 12',
 						  onUndo : function(aInfo) { log.push('u12'); },
 						  onRedo : function(aInfo) { log.push('r12'); } }
 					);
+					assert.isFalse(info.done);
 					window.setTimeout(function() {
 					  continuation();
 					}, 300);
@@ -410,6 +414,7 @@ function test_doUndoableTask_continuation()
 				  onUndo : function(aInfo) { log.push('u11'); },
 				  onRedo : function(aInfo) { log.push('r11'); } }
 			);
+			assert.isFalse(info.done);
 		},
 		{ label  : 'entry 10',
 		  onUndo : function(aInfo) { log.push('u10'); },
@@ -708,11 +713,29 @@ function test_UIHistoryMetaData_children()
 
 function test_ContinuationInfo_done()
 {
-	var info = new sv.ContinuationInfo();
+	var info;
 
+	info = new sv.ContinuationInfo();
 	assert.isTrue(info.done);
+	assert.isFalse(info.shouldWait);
 	info.created = true;
 	assert.isFalse(info.done);
+	assert.isTrue(info.shouldWait);
 	info.called = true;
+	assert.isTrue(info.done);
+	assert.isFalse(info.shouldWait);
+
+	info = new sv.ContinuationInfo();
+	info.done = false;
+	assert.isTrue(info.shouldWait);
+	assert.isFalse(info.done);
+	info.created = true;
+	assert.isTrue(info.shouldWait);
+	assert.isFalse(info.done);
+	info.called = true;
+	assert.isTrue(info.shouldWait);
+	assert.isFalse(info.done);
+	info.done = true;
+	assert.isFalse(info.shouldWait);
 	assert.isTrue(info.done);
 }
