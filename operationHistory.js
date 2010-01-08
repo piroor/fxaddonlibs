@@ -74,7 +74,7 @@
    http://www.cozmixng.org/repos/piro/fx3-compatibility-lib/trunk/operationHistory.test.js
 */
 (function() {
-	const currentRevision = 30;
+	const currentRevision = 31;
 
 	if (!('piro.sakura.ne.jp' in window)) window['piro.sakura.ne.jp'] = {};
 
@@ -163,6 +163,7 @@
 						this,
 						{
 							level     : 0,
+							history   : history,
 							parent    : null,
 							processed : false,
 							manager   : this,
@@ -237,6 +238,7 @@
 					try {
 						let info = {
 								level     : aIndex,
+								history   : history,
 								parent    : (aIndex ? entries[0] : null ),
 								processed : oneProcessed,
 								done      : oneProcessed, // old name
@@ -306,6 +308,7 @@
 					try {
 						let info = {
 								level     : aIndex,
+								history   : history,
 								parent    : (aIndex ? entries[0] : null ),
 								processed : oneProcessed,
 								done      : oneProcessed, // old name
@@ -803,6 +806,11 @@
 			return aValue;
 		},
 
+		get safeIndex()
+		{
+			return Math.max(0, Math.min(this.entries.length-1, this.index));
+		},
+
 		get inOperation()
 		{
 			return this.inOperationCount > 0;
@@ -897,6 +905,17 @@
 			return this._getEntriesAt(this.entries.length-1);
 		},
 
+		getEntryByName : function(aName)
+		{
+			var entries = this.getEntriesAt(this.safeIndex);
+			for each (e in entries)
+			{
+				if (e.name == aName)
+					return e;
+			}
+			return null;
+		},
+
 		toString : function()
 		{
 			var entries = this.entries;
@@ -932,7 +951,7 @@
 
 		get index()
 		{
-			return Math.max(0, Math.min(this.entries.length-1, this._original.index));
+			return this._original.safeIndex;
 		},
 		set index(aValue)
 		{
