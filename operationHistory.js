@@ -764,6 +764,8 @@
 		this.window   = aWindow;
 		this.windowId = aId;
 
+		this.key = aName+(aId ? ' ('+aId+')' : '' )
+
 		try {
 			var max = Prefs.getIntPref(this.maxPref);
 			this._max = Math.max(0, Math.min(this.MAX_ENTRIES, max));
@@ -817,6 +819,7 @@
 
 		clear : function()
 		{
+			log('UIHistory::clear '+this.key);
 			this.entries  = [];
 			this.metaData = [];
 			this.index    = -1;
@@ -825,7 +828,10 @@
 
 		addEntry : function(aEntry)
 		{
-			log('UIHistory::addEntry / register new entry to history\n  '+aEntry.label+'\n  in operation : '+this.inOperationCount, this.inOperationCount);
+			log('UIHistory::addEntry '+this.key+
+				'\n  '+aEntry.label+
+				'\n  in operation : '+this.inOperationCount,
+				this.inOperationCount);
 			if (this.inOperation) {
 				this.lastMetaData.children.push(aEntry);
 				log(' => child level ('+(this.lastMetaData.children.length-1)+')', this.inOperationCount);
@@ -910,8 +916,7 @@
 			else if (index >= entries.length)
 				string += '\n* '+entries.length+': -----';
 
-			var id = this.windowId;
-			return this.name+(id ? ' ('+id+')' : '' )+'\n'+string;
+			return this.key+'\n'+string;
 		}
 	};
 
