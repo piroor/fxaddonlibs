@@ -771,13 +771,42 @@ function test_UIHistory_currentLastEntries()
 	assert.equals(['2', '2.1', '2.2'], history.lastEntries);
 }
 
+function test_UIHistory_namedEntry()
+{
+	var history = new sv.UIHistory('test', null, null);
+	history.addEntry({ name : '0' });
+	history.inOperation = true;
+	history.addEntry({ name : '1' });
+	history.addEntry({ name : '2' });
+	history.addEntry({ name : '3' });
+	history.inOperation = false;
+	assert.equals('0,1,2,3', history.metaData[history.safeIndex].names.join(','));
+}
+
+function test_UIHistory_insertBefore()
+{
+	var history = new sv.UIHistory('test', null, null);
+
+	history.addEntry({ name : '0' });
+	var metaData = history.lastMetaData;
+
+	history.inOperation = true;
+	history.addEntry({ name : '1', insertBefore : ['0','3'] });
+	assert.equals('1,0', metaData.names.join(','));
+	history.addEntry({ name : '2', insertBefore : '0' });
+	assert.equals('1,2,0', metaData.names.join(','));
+	history.addEntry({ name : '3' });
+	assert.equals('1,2,0,3', metaData.names.join(','));
+	history.inOperation = false;
+}
+
 
 function test_UIHistoryProxy_index()
 {
-	var history = {
-			entries : [0, 1, 2],
-			index   : 0
-		};
+	var history = new sv.UIHistory('test', null, null);
+	history.addEntry('0');
+	history.addEntry('1');
+	history.addEntry('2');
 	var proxy = new sv.UIHistoryProxy(history);
 
 	history.index = 0;
