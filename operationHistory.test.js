@@ -331,10 +331,12 @@ function test_doUndoableTask()
 						},
 						{ label  : 'entry 2',
 						  onUndo : function(aInfo) {
+						    assert.isTrue(aInfo.processed);
 						    log.push(aInfo.level);
 						    log.push('u2');
 						  },
 						  onRedo : function(aInfo) {
+						    assert.isTrue(aInfo.processed);
 						    log.push(aInfo.level);
 						    log.push('r2');
 						  } }
@@ -342,11 +344,13 @@ function test_doUndoableTask()
 				},
 				{ label  : 'entry 1',
 				  onUndo : function(aInfo) {
+				    assert.isTrue(aInfo.processed);
 				    log.push(aInfo.level);
 				    if (aInfo.level) return false;
 				    log.push('u1');
 				  },
 				  onRedo : function(aInfo) {
+				    assert.isTrue(aInfo.processed);
 				    log.push(aInfo.level);
 				    if (aInfo.level) return false;
 				    log.push('r1');
@@ -355,10 +359,12 @@ function test_doUndoableTask()
 		},
 		{ label  : 'entry 0',
 		  onUndo : function(aInfo) {
+		    assert.isFalse(aInfo.processed);
 		    log.push(aInfo.level);
 		    log.push('u0');
 		  },
 		  onRedo : function(aInfo) {
+		    assert.isFalse(aInfo.processed);
 		    log.push(aInfo.level);
 		    log.push('r0');
 		  } }
@@ -460,6 +466,60 @@ function test_doUndoableTask_continuation()
 	sv.redo();
 	sv.redo();
 	assert.equals('u10,u11,u12,u00,u01,u02,r00,r01,r02,r10,r11,r12', log.join(','));
+}
+
+function test_exceptions()
+{
+	var log = [];
+	assert.raises('EXCEPTION FROM UNDOABLE TASK', function() {
+		sv.doUndoableTask(
+			function() {
+				log.push('t0');
+				sv.doUndoableTask(
+					function() {
+						log.push('t1');
+						throw 'EXCEPTION FROM UNDOABLE TASK';
+						sv.doUndoableTask(
+							function() {
+								log.push('t2');
+							},
+							{ label  : 'entry 2',
+							  onUndo : function(aInfo) {
+							    log.push('u2');
+							  },
+							  onRedo : function(aInfo) {
+							    log.push('r2');
+							  } }
+						);
+					},
+					{ label  : 'entry 1',
+					  onUndo : function(aInfo) {
+					    throw 'EXCEPTION FROM UNDO PROCESS';
+					    log.push('u1');
+					  },
+					  onRedo : function(aInfo) {
+					    throw 'EXCEPTION FROM REDO PROCESS';
+					    log.push('r1');
+					  } }
+				);
+			},
+			{ label  : 'entry 0',
+			  onUndo : function(aInfo) {
+			    log.push('u0');
+			  },
+			  onRedo : function(aInfo) {
+			    log.push('r0');
+			  } }
+		);
+	});
+
+	assert.raises('EXCEPTION FROM UNDO PROCESS', function() {
+		sv.undo();
+	});
+	assert.raises('EXCEPTION FROM REDO PROCESS', function() {
+		sv.redo();
+	});
+	assert.equals('t0,t1,u0,r0', log.join(','));
 }
 
 

@@ -74,7 +74,7 @@
    http://www.cozmixng.org/repos/piro/fx3-compatibility-lib/trunk/operationHistory.test.js
 */
 (function() {
-	const currentRevision = 29;
+	const currentRevision = 30;
 
 	if (!('piro.sakura.ne.jp' in window)) window['piro.sakura.ne.jp'] = {};
 
@@ -162,10 +162,10 @@
 					options.task.call(
 						this,
 						{
-							level   : 0,
-							parent  : null,
-							done    : false,
-							manager : this,
+							level     : 0,
+							parent    : null,
+							processed : false,
+							manager   : this,
 							getContinuation : function() {
 								return this.manager._createContinuation(
 										'undoable',
@@ -229,44 +229,41 @@
 				--history.index;
 				if (!entries.length) continue;
 				log((history.index+1)+' '+entries[0].label, 1);
-				let done = false;
-				entries.forEach(function(aEntry, aIndex) {
+				let oneProcessed = false;
+				entries.some(function(aEntry, aIndex) {
 					log('level '+(aIndex)+' '+aEntry.label, 2);
 					let f = this._getAvailableFunction(aEntry.onUndo, aEntry.onundo, aEntry.undo);
+					if (!f) return;
 					try {
-						if (f) {
-							let info = {
-									level   : aIndex,
-									parent  : (aIndex ? entries[0] : null ),
-									done    : processed && done,
-									manager : this,
-									getContinuation : function() {
-										return this.manager._createContinuation(
-												continuationInfo.created ? 'null' : 'undo',
-												options,
-												continuationInfo
-											);
-									}
-								};
-							let oneProcessed = f.call(aEntry, info);
-							done = true;
-							if (oneProcessed !== false)
-								processed = oneProcessed;
-						}
-						else {
-							processed = true;
-						}
+						let info = {
+								level     : aIndex,
+								parent    : (aIndex ? entries[0] : null ),
+								processed : oneProcessed,
+								done      : oneProcessed, // old name
+								manager   : this,
+								getContinuation : function() {
+									return this.manager._createContinuation(
+											continuationInfo.created ? 'null' : 'undo',
+											options,
+											continuationInfo
+										);
+								}
+							};
+						if (f.call(aEntry, info) !== false)
+							oneProcessed = true;
 					}
 					catch(e) {
 						log(e, 2);
-						error = e;
+						return error = e;
 					}
 				}, this);
-				this._dispatchEvent('UIOperationGlobalHistoryUndo', options, entries[0], done);
+				if (error) break;
+				processed = oneProcessed;
+				this._dispatchEvent('UIOperationGlobalHistoryUndo', options, entries[0], oneProcessed);
 			}
 			while (processed === false && history.canUndo);
 
-			if (continuationInfo.done) {
+			if (error || continuationInfo.done) {
 				this._setUndoingState(options.key, false);
 				log('  => undo finish\n'+history.toString());
 			}
@@ -301,44 +298,40 @@
 				let entries = history.currentEntries;
 				if (!entries.length) continue;
 				log((history.index)+' '+entries[0].label, 1);
-				let done = false;
-				entries.forEach(function(aEntry, aIndex) {
+				let oneProcessed = false;
+				entries.some(function(aEntry, aIndex) {
 					log('level '+(aIndex)+' '+aEntry.label, 2);
 					let f = this._getAvailableFunction(aEntry.onRedo, aEntry.onredo, aEntry.redo);
-					let done = false;
+					if (!f) return;
 					try {
-						if (f) {
-							let info = {
-									level   : aIndex,
-									parent  : (aIndex ? entries[0] : null ),
-									done    : processed && done,
-									manager : this,
-									getContinuation : function() {
-										return this.manager._createContinuation(
-												continuationInfo.created ? 'null' : 'redo',
-												options,
-												continuationInfo
-											);
-									}
-								};
-							let oneProcessed = f.call(aEntry, info);
-							done = true;
-							if (oneProcessed !== false)
-								processed = oneProcessed;
-						}
-						else {
-							processed = true;
-						}
+						let info = {
+								level     : aIndex,
+								parent    : (aIndex ? entries[0] : null ),
+								processed : oneProcessed,
+								done      : oneProcessed, // old name
+								manager   : this,
+								getContinuation : function() {
+									return this.manager._createContinuation(
+											continuationInfo.created ? 'null' : 'redo',
+											options,
+											continuationInfo
+										);
+								}
+							};
+						if (f.call(aEntry, info) !== false)
+							oneProcessed = true;
 					}
 					catch(e) {
 						log(e, 2);
-						error = e;
+						return error = e;
 					}
 				}, this);
-				this._dispatchEvent('UIOperationGlobalHistoryRedo', options, entries[0], done);
+				if (error) break;
+				processed = oneProcessed;
+				this._dispatchEvent('UIOperationGlobalHistoryRedo', options, entries[0], oneProcessed);
 			}
 
-			if (continuationInfo.done) {
+			if (error || continuationInfo.done) {
 				this._setRedoingState(options.key, false);
 				log('  => redo finish\n'+history.toString());
 			}
@@ -520,7 +513,7 @@
 			window.removeEventListener('unload', this, false);
 		},
 
-		_dispatchEvent : function(aType, aOptions, aEntry, aDone)
+		_dispatchEvent : function(aType, aOptions, aEntry, aProcessed)
 		{
 			var d = aOptions.window ? aOptions.window.document : document ;
 			var event = d.createEvent('Events');
@@ -528,7 +521,8 @@
 			event.name  = aOptions.name;
 			event.entry = aEntry;
 			event.data  = aEntry; // old name
-			event.done  = aDone;
+			event.processed = aProcessed || false;
+			event.done      = aProcessed || false; // old name
 			d.dispatchEvent(event);
 		},
 
