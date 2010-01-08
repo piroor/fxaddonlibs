@@ -916,7 +916,8 @@
 			else if (index >= entries.length)
 				string += '\n* '+entries.length+': -----';
 
-			return this.key+'\n'+string;
+			var id = this.windowId;
+			return this.name+(id ? ' ('+id+')' : '' )+'\n'+string;
 		}
 	};
 
