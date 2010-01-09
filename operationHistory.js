@@ -150,9 +150,11 @@
 		{
 			var options = this._getHistoryOptionsFromArguments(arguments);
 			var history = options.history;
-			log('doUndoableTask start ('+options.name+' for '+options.windowId+')', history.inOperationCount);
-
 			var entry = options.entry;
+			log('doUndoableTask start '+options.name+' ('+options.windowId+')'+
+				'\n  '+entry.label,
+				history.inOperationCount);
+
 			var registered = false;
 			if (
 				entry &&
@@ -214,7 +216,7 @@
 								history.inOperationCount);
 						}
 						history.inOperation = false;
-						log('  => doUndoableTask done / in operation : '+history.inOperation+
+						log('  => doUndoableTask done / '+history.inOperation+
 							'\n'+history.toString(),
 							history.inOperationCount);
 					};
@@ -1109,7 +1111,7 @@
 		{
 			log('UIHistory::addEntry '+this.key+
 				'\n  '+aEntry.label+
-				'\n  in operation : '+this.inOperationCount,
+				'\n  '+this.inOperationCount,
 				this.inOperationCount);
 			if (this.inOperation) {
 				let metaData = this.lastMetaData;
