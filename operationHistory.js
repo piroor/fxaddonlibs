@@ -74,7 +74,7 @@
    http://www.cozmixng.org/repos/piro/fx3-compatibility-lib/trunk/operationHistory.test.js
 */
 (function() {
-	const currentRevision = 35;
+	const currentRevision = 44;
 
 	if (!('piro.sakura.ne.jp' in window)) window['piro.sakura.ne.jp'] = {};
 
@@ -106,6 +106,10 @@
 					.getService(Ci.fuelIApplication);
 	const Prefs = Cc['@mozilla.org/preferences;1']
 					.getService(Ci.nsIPrefBranch);
+	const WindowMediator = Cc['@mozilla.org/appshell/window-mediator;1']
+					.getService(Ci.nsIWindowMediator);
+	const SessionStore = Cc['@mozilla.org/browser/sessionstore;1']
+					.getService(Ci.nsISessionStore);
 
 	var DEBUG = false;
 	try {
@@ -134,7 +138,8 @@
 	window['piro.sakura.ne.jp'].operationHistory = {
 		revision : currentRevision,
 
-		WINDOW_ID : 'ui-operation-global-history-window-id',
+		WINDOW_ID : 'ui-operation-history-window-id',
+		ELEMENT_ID : 'ui-operation-history-element-id',
 
 		addEntry : function()
 		{
@@ -143,83 +148,116 @@
 
 		doUndoableTask : function()
 		{
-			var options = this._getOptionsFromArguments(arguments);
+			var options = this._getHistoryOptionsFromArguments(arguments);
 			var history = options.history;
 			log('doUndoableTask start ('+options.name+' for '+options.windowId+')', history.inOperationCount);
 
 			var entry = options.entry;
-			if (entry &&
+			var registered = false;
+			if (
+				entry &&
 				!this._getUndoingState(options.key) &&
-				!this._getRedoingState(options.key)) {
+				!this._getRedoingState(options.key)
+				) {
 				let f = this._getAvailableFunction(entry.onRedo, entry.onredo, entry.redo);
-				if (!f && !entry.onRedo && !entry.onredo && !entry.redo && options.task)
+				if (
+					!f &&
+					!('onRedo' in entry) &&
+					!('onredo' in entry) &&
+					!('redo' in entry) &&
+					options.task
+					)
 					entry.onRedo = options.task;
 				history.addEntry(entry);
+				registered = true;
 			}
 
-			var continuationInfo = new ContinuationInfo();
-			if (history.inOperation)
-				continuationInfo.done = false;
-
-			history.inOperation = true;
 			var error;
-			try {
-				if (options.task)
-					options.task.call(
-						this,
-						{
-							level     : 0,
-							history   : history,
-							parent    : null,
-							processed : false,
-							manager   : this,
-							getContinuation : function() {
-								return this.manager._createContinuation(
-										'undoable',
-										options,
-										continuationInfo
-									);
-							}
-						}
-					);
-			}
-			catch(e) {
-				log(e, history.inOperationCount);
-				error = e;
-			}
+			var canceled;
+			var done = { done : true };
+			if (options.task) {
+				history.inOperation = true;
 
-			if (!continuationInfo.shouldWait) {
-				history.inOperation = false;
-				log('  => doUndoableTask finish / in operation : '+history.inOperation+
-					'\n'+history.toString(),
-					history.inOperationCount);
-				// wait for all child processes
-				if (history.inOperation)
-					continuationInfo = {
-						get done() {
-							return !history.inOperation;
+				var self = this;
+				var iterator = (function() {
+						try {
+							canceled = options.task.call(
+								this,
+								{
+									level   : history.inOperationCount-1,
+									manager : self,
+									window  : window,
+									getContinuation : function() {
+										done.done = false;
+										return function() {
+											done.done = true;
+										};
+									}
+								}
+							);
 						}
+						catch(e) {
+							log(e, history.inOperationCount);
+							error = e;
+						}
+						while (!done.done)
+						{
+							yield true;
+						}
+					})();
+
+				var onFinish = function() {
+						if (registered && canceled === false) {
+							history.removeEntry(entry);
+							log('  => doUndoableTask canceled : '+history.inOperation+
+								'\n'+history.toString(),
+								history.inOperationCount);
+						}
+						history.inOperation = false;
+						log('  => doUndoableTask done / in operation : '+history.inOperation+
+							'\n'+history.toString(),
+							history.inOperationCount);
 					};
-			}
-			else {
-				continuationInfo.allowed = true;
+
+				try {
+					done.done = !iterator.next();
+					new ScheduledTask(function() {
+							try {
+								iterator.next();
+							}
+							catch(e if e instanceof StopIteration) {
+								onFinish();
+								return false;
+							}
+							catch(e) {
+								return false;
+							}
+							finally {
+								if (error)
+									throw error;
+							}
+						}, 10);
+				}
+				catch(e if e instanceof StopIteration) {
+					onFinish();
+				}
 			}
 
 			if (error)
 				throw error;
 
-			return continuationInfo;
+			return done;
 		},
 
 		getHistory : function()
 		{
-			var options = this._getOptionsFromArguments(arguments);
+			var options = this._getHistoryOptionsFromArguments(arguments);
 			return new UIHistoryProxy(options.history);
 		},
 
 		undo : function()
 		{
-			var options = this._getOptionsFromArguments(arguments);
+			var options = this._getHistoryOptionsFromArguments(arguments);
 			var history = options.history;
 			var undoing = this._getUndoingState(options.key);
 			log('undo start ('+history.index+' / '+history.entries.length+', '+options.name+' for '+options.windowId+', '+undoing+')');
@@ -229,65 +267,94 @@
 			this._setUndoingState(options.key, true);
 			var processed = false;
 			var error;
-			var continuationInfo = new ContinuationInfo();
 
-			do {
-				let entries = history.currentEntries;
-				--history.index;
-				if (!entries.length) continue;
-				log((history.index+1)+' '+entries[0].label, 1);
-				let oneProcessed = false;
-				entries.some(function(aEntry, aIndex) {
-					log('level '+(aIndex)+' '+aEntry.label, 2);
-					let f = this._getAvailableFunction(aEntry.onUndo, aEntry.onundo, aEntry.undo);
-					if (!f) return;
-					try {
-						let info = {
-								level     : aIndex,
-								history   : history,
-								parent    : (aIndex ? entries[0] : null ),
-								processed : oneProcessed,
-								done      : oneProcessed, // old name
-								manager   : this,
-								getContinuation : function() {
-									return this.manager._createContinuation(
-											continuationInfo.created ? 'null' : 'undo',
-											options,
-											continuationInfo
-										);
-								}
-							};
-						if (f.call(aEntry, info) !== false)
-							oneProcessed = true;
+			var self = this;
+			var iterator = (function() {
+					do {
+						let entries = history.currentEntries;
+						--history.index;
+						if (!entries.length) continue;
+						log((history.index+1)+' '+entries[0].label, 1);
+						let oneProcessed = false;
+						let max = entries.length-1;
+						entries = Array.slice(entries).reverse();
+						for (let i in entries)
+						{
+							let entry = entries[i];
+							log('level '+(max-i)+' '+entry.label, 2);
+							let f = self._getAvailableFunction(entry.onUndo, entry.onundo, entry.undo);
+							if (!f) return;
+							let done = true;
+							try {
+								let info = {
+										level   : max-i,
+										manager : self,
+										window  : window,
+										getContinuation : function() {
+											done = false;
+											return function() {
+												done = true;
+											};
+										}
+									};
+								if (f.call(entry, info) !== false)
+									oneProcessed = true;
+							}
+							catch(e) {
+								log(e, 2);
+								error = e;
+								break;
+							}
+							while (!done)
+							{
+								yield true;
+							}
+						}
+						if (error) break;
+						processed = oneProcessed;
 					}
-					catch(e) {
-						log(e, 2);
-						return error = e;
-					}
-				}, this);
-				if (error) break;
-				processed = oneProcessed;
-				this._dispatchEvent('UIOperationGlobalHistoryUndo', options, entries[0], oneProcessed);
-			}
-			while (processed === false && history.canUndo);
+					while (processed === false && history.canUndo);
+				})();
 
-			if (error || continuationInfo.done) {
-				this._setUndoingState(options.key, false);
-				log('  => undo finish\n'+history.toString());
+			var onFinish = function() {
+					self._setUndoingState(options.key, false);
+					log('  => undo done\n'+history.toString());
+				};
+
+			var done = { done : true };
+			try {
+				done.done = !iterator.next();
+				new ScheduledTask(function() {
+						try {
+							iterator.next();
+						}
+						catch(e if e instanceof StopIteration) {
+							done.done = true;
+							onFinish();
+							return false;
+						}
+						catch(e) {
+							return false;
+						}
+						finally {
+							if (error)
+								throw error;
+						}
+					}, 10);
 			}
-			else {
-				continuationInfo.allowed = true;
+			catch(e if e instanceof StopIteration) {
+				onFinish();
 			}
 
 			if (error)
 				throw error;
 
-			return continuationInfo;
+			return done;
 		},
 
 		redo : function()
 		{
-			var options = this._getOptionsFromArguments(arguments);
+			var options = this._getHistoryOptionsFromArguments(arguments);
 			var history = options.history;
 			var max = history.entries.length;
 			var redoing = this._getRedoingState(options.key);
@@ -298,65 +365,92 @@
 			this._setRedoingState(options.key, true);
 			var processed = false;
 			var error;
-			var continuationInfo = new ContinuationInfo();
 
-			while (processed === false && history.canRedo)
-			{
-				++history.index;
-				let entries = history.currentEntries;
-				if (!entries.length) continue;
-				log((history.index)+' '+entries[0].label, 1);
-				let oneProcessed = false;
-				entries.some(function(aEntry, aIndex) {
-					log('level '+(aIndex)+' '+aEntry.label, 2);
-					let f = this._getAvailableFunction(aEntry.onRedo, aEntry.onredo, aEntry.redo);
-					if (!f) return;
-					try {
-						let info = {
-								level     : aIndex,
-								history   : history,
-								parent    : (aIndex ? entries[0] : null ),
-								processed : oneProcessed,
-								done      : oneProcessed, // old name
-								manager   : this,
-								getContinuation : function() {
-									return this.manager._createContinuation(
-											continuationInfo.created ? 'null' : 'redo',
-											options,
-											continuationInfo
-										);
-								}
-							};
-						if (f.call(aEntry, info) !== false)
-							oneProcessed = true;
+			var self = this;
+			var iterator = (function() {
+					while (processed === false && history.canRedo)
+					{
+						++history.index;
+						let entries = history.currentEntries;
+						if (!entries.length) continue;
+						log((history.index)+' '+entries[0].label, 1);
+						let oneProcessed = false;
+						for (let i in entries)
+						{
+							let entry = entries[i];
+							log('level '+(i)+' '+entry.label, 2);
+							let f = self._getAvailableFunction(entry.onRedo, entry.onredo, entry.redo);
+							if (!f) return;
+							let done = true;
+							try {
+								let info = {
+										level   : i,
+										manager : self,
+										window  : window,
+										getContinuation : function() {
+											done = false;
+											return function() {
+												done = true;
+											};
+										}
+									};
+								if (f.call(entry, info) !== false)
+									oneProcessed = true;
+							}
+							catch(e) {
+								log(e, 2);
+								error = e;
+								break;
+							}
+							while (!done)
+							{
+								yield true;
+							}
+						}
+						if (error) break;
+						processed = oneProcessed;
 					}
-					catch(e) {
-						log(e, 2);
-						return error = e;
-					}
-				}, this);
-				if (error) break;
-				processed = oneProcessed;
-				this._dispatchEvent('UIOperationGlobalHistoryRedo', options, entries[0], oneProcessed);
-			}
+				})();
 
-			if (error || continuationInfo.done) {
-				this._setRedoingState(options.key, false);
-				log('  => redo finish\n'+history.toString());
+			var onFinish = function() {
+					self._setRedoingState(options.key, false);
+					log('  => redo done\n'+history.toString());
+				};
+
+			var done = { done : true };
+			try {
+				done.done = !iterator.next();
+				new ScheduledTask(function() {
+						try {
+							iterator.next();
+						}
+						catch(e if e instanceof StopIteration) {
+							done.done = true;
+							onFinish();
+							return false;
+						}
+						catch(e) {
+							return false;
+						}
+						finally {
+							if (error)
+								throw error;
+						}
+					}, 10);
 			}
-			else {
-				continuationInfo.allowed = true;
+			catch(e if e instanceof StopIteration) {
+				onFinish();
 			}
 
 			if (error)
 				throw error;
 
-			return continuationInfo;
+			return done;
 		},
 
 		goToIndex : function()
 		{
-			var options = this._getOptionsFromArguments(arguments);
+			var options = this._getHistoryOptionsFromArguments(arguments);
 			var history = options.history;
 			var index = Math.max(0, Math.min(history.entries.length-1, options.index));
 			var current = history.index;
@@ -364,7 +458,6 @@
 			if (index == current)
 				return { done : true };
 
-			var selfInfo = { done : false };
 			var self = this;
 			var iterator = (function() {
 					while (true)
@@ -383,34 +476,55 @@
 
 						while (!info.done)
 						{
-							yield;
+							yield true;
 						}
 					}
 				})();
 
-			var timer = window.setInterval(function() {
-					try {
-						iterator.next();
-					}
-					catch(e) {
-						selfInfo.done = true;
-						window.clearInterval(timer);
-					}
-				}, 10);
+			var done = { done : true };
+			try {
+				done.done = !iterator.next();
+				new ScheduledTask(function() {
+						try {
+							iterator.next();
+						}
+						catch(e if e instanceof StopIteration) {
+							done.done = true;
+							window.clearInterval(timer);
+							return false;
+						}
+						catch(e) {
+							return false;
+						}
+					}, 10);
+			}
+			catch(e) {
+			}
 
-			return selfInfo;
+			return done;
+		},
+
+		isUndoing : function()
+		{
+			var options = this._getHistoryOptionsFromArguments(arguments);
+			return this._getUndoingState(options.key);
+		},
+		isRedoing : function()
+		{
+			var options = this._getHistoryOptionsFromArguments(arguments);
+			return this._getRedoingState(options.key);
 		},
 
 		syncWindowHistoryFocus : function(aOptions)
 		{
 			if (!aOptions.currentEntry)
-				throw 'currentEntry must be specified!';
+				throw new Error('currentEntry must be specified!');
 			if (!aOptions.entries)
-				throw 'entries must be specified!';
+				throw new Error('entries must be specified!');
 			if (!aOptions.windows)
-				throw 'windows must be specified!';
+				throw new Error('windows must be specified!');
 			if (aOptions.entries.length != aOptions.windows.length)
-				throw 'numbers of entries and windows must be same!';
+				throw new Error('numbers of entries and windows must be same!');
 
 			var name = aOptions.name || 'window';
 
@@ -431,9 +545,10 @@
 
 		clear : function()
 		{
-			var options = this._getOptionsFromArguments(arguments);
+			var options = this._getHistoryOptionsFromArguments(arguments);
 			return options.history.clear();
 		},
+
 
 		getWindowId : function(aWindow, aDefaultId)
 		{
@@ -441,10 +556,17 @@
 			var id = root.getAttribute(this.WINDOW_ID) || aDefaultId;
 			try {
 				if (!id)
-					id = this.SessionStore.getWindowValue(aWindow, this.WINDOW_ID);
+					id = SessionStore.getWindowValue(aWindow, this.WINDOW_ID);
 			}
 			catch(e) {
 			}
+			return this.setWindowId(aWindow, id);
+		},
+
+		setWindowId : function(aWindow, aDefaultId)
+		{
+			var id = aDefaultId;
+			var root = aWindow.document.documentElement;
 
 			// When the ID has been already used by other window,
 			// we have to create new ID for this window.
@@ -457,7 +579,7 @@
 			if (root.getAttribute(this.WINDOW_ID) != id) {
 				root.setAttribute(this.WINDOW_ID, id);
 				try {
-					this.SessionStore.setWindowValue(aWindow, this.WINDOW_ID, id);
+					SessionStore.setWindowValue(aWindow, this.WINDOW_ID, id);
 				}
 				catch(e) {
 				}
@@ -467,7 +589,7 @@
 
 		getWindowById : function(aId)
 		{
-			var targets = this.WindowMediator.getZOrderDOMWindowEnumerator(null, true);
+			var targets = WindowMediator.getZOrderDOMWindowEnumerator(null, true);
 			while (targets.hasMoreElements())
 			{
 				let target = targets.getNext().QueryInterface(Ci.nsIDOMWindowInternal);
@@ -477,15 +599,151 @@
 			return null;
 		},
 
-		isUndoing : function()
+		getElementId : function(aElement, aDefaultId)
 		{
-			var options = this._getOptionsFromArguments(arguments);
-			return this._getUndoingState(options.key);
+			var id = aElement.getAttribute(this.ELEMENT_ID) || aDefaultId;
+			try {
+				if (!id && aElement.localName == 'tab')
+					id = SessionStore.getTabValue(aElement, this.ELEMENT_ID);
+			}
+			catch(e) {
+			}
+			return this.setElementId(aElement, id);
 		},
-		isRedoing : function()
+
+		setElementId : function(aElement, aDefaultId)
 		{
-			var options = this._getOptionsFromArguments(arguments);
-			return this._getRedoingState(options.key);
+			var id = aDefaultId;
+
+			// When the ID has been already used by other elements,
+			// we have to create new ID for this element.
+			var elements = this._getElementsById(id, aElement.parentNode || aElement.ownerDocument);
+			var forceNewId = elements.length && (elements.length > 1 || elements[0] != aElement);
+
+			if (!id || forceNewId)
+				id = 'element-'+Date.now()+parseInt(Math.random() * 65000);
+
+			if (aElement.getAttribute(this.ELEMENT_ID) != id) {
+				aElement.setAttribute(this.ELEMENT_ID, id);
+				try {
+					if (aElement.localName == 'tab')
+						SessionStore.setTabValue(aElement, this.ELEMENT_ID, id);
+				}
+				catch(e) {
+				}
+			}
+			return id;
+		},
+
+		setBindingParentId : function(aNode, aDefaultId)
+		{
+			var parent = aNode.ownerDocument.getBindingParent(aNode);
+			return parent ? this.setElementId(parent, aDefaultId) : null ;
+		},
+
+		getWindowById : function(aId)
+		{
+			if (!aId)
+				throw new Error('window id must be specified.');
+			var targets = WindowMediator.getZOrderDOMWindowEnumerator(null, true);
+			while (targets.hasMoreElements())
+			{
+				let target = targets.getNext().QueryInterface(Ci.nsIDOMWindowInternal);
+				if (aId == this.getWindowId(target))
+					return target;
+			}
+			return null;
+		},
+
+		getElementById : function()
+		{
+			var options = this._getElementOptionsFromArguments(arguments);
+			if (!options.id)
+				throw new Error('element id must be specified.');
+			return this._evaluateXPath(
+					'descendant::*[@'+this.ELEMENT_ID+'="'+options.id+'"][1]',
+					options.parent,
+					Ci.nsIDOMXPathResult.FIRST_ORDERED_NODE_TYPE
+				).singleNodeValue;
+		},
+
+		getId : function(aTarget, aDefaultId)
+		{
+			if (aTarget instanceof Ci.nsIDOMWindow)
+				return this.getWindowId(aTarget, aDefaultId);
+			if (aTarget instanceof Ci.nsIDOMDocument)
+				return this.getWindowId(aTarget.defaultView, aDefaultId);
+			if (aTarget instanceof Ci.nsIDOMElement)
+				return this.getElementId(aTarget, aDefaultId);
+			throw new Error(aTarget+' is an unknown type item.');
+		},
+
+		getBindingParentId : function(aNode, aDefaultId)
+		{
+			var parent = aNode.ownerDocument.getBindingParent(aNode);
+			return parent ? this.getId(parent, aDefaultId) : null ;
+		},
+
+		getTargetById : function()
+		{
+			var id;
+			Array.slice(arguments).some(function(aArg) {
+				if (typeof aArg == 'string')
+					return id = aArg;
+				return false;
+			});
+			if (!id)
+				throw new Error('target id must be specified.');
+
+			if (id.indexOf('window-') == 0)
+				return this.getWindowById.apply(this, arguments);
+			if (id.indexOf('element-') == 0)
+				return this.getElementById.apply(this, arguments);
+
+			throw new Error(id+' is an unknown type id.');
+		},
+
+		getTargetsByIds : function()
+		{
+			var ids = [];
+			var otherArgs = [];
+			Array.slice(arguments).forEach(function(aArg) {
+				if (typeof aArg == 'string')
+					ids.push(aArg);
+				else
+					otherArgs.push(aArg);
+			});
+			if (!ids.length)
+				throw new Error('target id must be specified.');
+
+			return ids.map(function(aId) {
+					return this.getTargetById.apply(this, [aId].concat(otherArgs));
+				}, this);
+		},
+
+		getRelatedTargetsByIds : function(aIds, aRootParent) 
+		{
+			var results = [];
+			var lastParent = aRootParent;
+			aIds.some(function(aId) {
+				try {
+					var lastResult;
+					if (typeof aId != 'string') {
+						lastReuslt = this.getTargetsByIds(aId, lastParent);
+						lastParent = lastParent[0];
+					}
+					else {
+						lastReuslt = this.getTargetById(aId, lastParent);
+						lastParent = lastReuslt;
+					}
+					results.push(lastReuslt);
+					return false;
+				}
+				catch(e) {
+					return e;
+				}
+			}, this);
+			return results;
 		},
 
 
@@ -498,7 +756,7 @@
 		init : function()
 		{
 			// inherit history table from existing window
-			var targets = this.WindowMediator.getZOrderDOMWindowEnumerator(null, true);
+			var targets = WindowMediator.getZOrderDOMWindowEnumerator(null, true);
 			while (targets.hasMoreElements())
 			{
 				let target = targets.getNext().QueryInterface(Ci.nsIDOMWindowInternal);
@@ -553,20 +811,31 @@
 			window.removeEventListener('unload', this, false);
 		},
 
-		_dispatchEvent : function(aType, aOptions, aEntry, aProcessed)
+		_evaluateXPath : function(aExpression, aContext, aType) 
 		{
-			var d = aOptions.window ? aOptions.window.document : document ;
-			var event = d.createEvent('Events');
-			event.initEvent(aType, true, false);
-			event.name  = aOptions.name;
-			event.entry = aEntry;
-			event.data  = aEntry; // old name
-			event.processed = aProcessed || false;
-			event.done      = aProcessed || false; // old name
-			d.dispatchEvent(event);
+			try {
+				var doc = aContext.ownerDocument || aContext;
+				var xpathResult = doc.evaluate(
+						aExpression,
+						aContext,
+						null,
+						aType,
+						null
+					);
+			}
+			catch(e) {
+				return {
+					singleNodeValue : null,
+					snapshotLength  : 0,
+					snapshotItem    : function() {
+						return null
+					}
+				};
+			}
+			return xpathResult;
 		},
 
-		_getOptionsFromArguments : function(aArguments)
+		_getHistoryOptionsFromArguments : function(aArguments)
 		{
 			var w     = null,
 				name  = '',
@@ -605,6 +874,39 @@
 			};
 		},
 
+		_getElementOptionsFromArguments : function(aArguments)
+		{
+			var id       = '',
+				document = null,
+				parent   = null;
+			Array.slice(aArguments).forEach(function(aArg) {
+				if (typeof aArg == 'string')
+					id = aArg;
+				else if (aArg instanceof Ci.nsIDOMDocument)
+					document = aArg;
+				else if (aArg instanceof Ci.nsIDOMWindow)
+					document = aArg.document;
+				else if (aArg instanceof Ci.nsIDOMNode)
+					parent = aArg;
+			});
+
+			if (!document) {
+				if (parent)
+					document = parent.ownerDocument;
+				else
+					document = window.document;
+			}
+
+			if (!parent)
+				parent = document;
+
+			return {
+				id       : id,
+				parent   : parent,
+				document : document
+			};
+		},
+
 		_getHistoryFor : function(aName, aWindow)
 		{
 			var uniqueName = encodeURIComponent(aName);
@@ -618,71 +920,6 @@
 			}
 
 			return this._db.histories[uniqueName];
-		},
-
-		_createContinuation : function(aType, aOptions, aInfo)
-		{
-			var continuation;
-			var history = aOptions.history;
-			var key     = aOptions.key;
-			var self    = this;
-			switch (aType)
-			{
-				case 'undoable':
-					aInfo.done = false;
-					continuation = function() {
-						if (aInfo.allowed) {
-							history.inOperation = false;
-							if (!history.inOperation)
-								aInfo.done = true;
-						}
-						aInfo.called = true;
-						log('  => doUndoableTask finish (delayed) / '+
-							'in operation : '+history.inOperationCount+' / '+
-							'allowed : '+aInfo.allowed+
-							'\n'+history.toString(),
-							history.inOperationCount);
-					};
-					key = null;
-					self = null;
-					aInfo.created = true;
-					break;
-
-				case 'undo':
-					continuation = function() {
-						if (aInfo.allowed)
-							self._setUndoingState(key, false);
-						aInfo.called = true;
-						log('  => undo finish (delayed)\n'+history.toString());
-					};
-					aInfo.created = true;
-					break;
-
-				case 'redo':
-					continuation = function() {
-						if (aInfo.allowed)
-							self._setRedoingState(key, false);
-						aInfo.called = true;
-						log('  => redo finish (delayed)\n'+history.toString());
-					};
-					aInfo.created = true;
-					break;
-
-				case 'null':
-					continuation = function() {
-					};
-					history = null;
-					key = null;
-					self = null;
-					aInfo.created = true;
-					aInfo = null;
-					break;
-
-				default:
-					throw 'unknown continuation type: '+aType;
-			}
-			aOptions = null;
-			return continuation;
 		},
 
 		_getAvailableFunction : function()
@@ -719,7 +956,7 @@
 
 		_getWindowsById : function(aId)
 		{
-			var targets = this.WindowMediator.getZOrderDOMWindowEnumerator(null, true);
+			var targets = WindowMediator.getZOrderDOMWindowEnumerator(null, true);
 			var windows = [];
 			while (targets.hasMoreElements())
 			{
@@ -727,7 +964,7 @@
 				let id = target.document.documentElement.getAttribute(this.WINDOW_ID);
 				try {
 					if (!id)
-						id = this.SessionStore.getWindowValue(target, this.WINDOW_ID)
+						id = SessionStore.getWindowValue(target, this.WINDOW_ID)
 				}
 				catch(e) {
 				}
@@ -737,13 +974,28 @@
 			return windows;
 		},
 
+		_getElementsById : function(aId, aParent)
+		{
+			var result = this._evaluateXPath(
+					'descendant::*[@'+this.ELEMENT_ID+'="'+aId+'"][1]',
+					aParent,
+					Ci.nsIDOMXPathResult.ORDERED_NODE_SNAPSHOT_TYPE
+				);
+			var elements = [];
+			for (let i = 0, maxi = result.snapshotLength; i < maxi; i++)
+			{
+				elements.push(result.snapshotItem(i));
+			}
+			return elements;
+		},
+
 		_getUndoingState : function(aKey)
 		{
-			return this._db.undoing && aKey in this._db.undoing;
+			return this._db.undoing ? aKey in this._db.undoing : false ;
 		},
 		_getRedoingState : function(aKey)
 		{
-			return this._db.redoing && aKey in this._db.redoing;
+			return this._db.redoing ? aKey in this._db.redoing : false ;
 		},
 
 		_setUndoingState : function(aKey, aState)
@@ -766,24 +1018,6 @@
 			else if (aKey in this._db.redoing)
 				delete this._db.redoing[aKey];
 		},
-
-		get WindowMediator() {
-			if (!this._WindowMediator) {
-				this._WindowMediator = Cc['@mozilla.org/appshell/window-mediator;1']
-										.getService(Ci.nsIWindowMediator);
-			}
-			return this._WindowMediator;
-		},
-		_WindowMediator : null,
-
-		get SessionStore() { 
-			if (!this._SessionStore) {
-				this._SessionStore = Cc['@mozilla.org/browser/sessionstore;1']
-										.getService(Ci.nsISessionStore);
-			}
-			return this._SessionStore;
-		},
-		_SessionStore : null,
 
 		handleEvent : function(aEvent)
 		{
@@ -887,11 +1121,6 @@
 				this._addNewEntry(aEntry);
 				log(' => level 0 (new entry at '+(this.entries.length-1)+')', this.inOperationCount);
 			}
-
-			if (aEntry.insertBefore)
-				this._insertBefore(aEntry, aEntry.insertBefore);
-			else if (aEntry.name)
-				this._checkInsertion(aEntry);
 		},
 		_addNewEntry : function(aEntry)
 		{
@@ -908,64 +1137,24 @@
 
 			this.index = this.entries.length;
 		},
-		_insertBefore : function(aEntry, aNames)
+
+		removeEntry : function(aEntry)
 		{
-			if (typeof aNames == 'string')
-				aNames = [aNames];
+			for (let i = this.safeIndex; i > -1; i--)
+			{
+				let index = this._getEntriesAt(i).indexOf(aEntry);
+				if (index < 0) continue;
 
-			if (!aNames.length)
-				return;
-
-			var index = this.safeIndex;
-			var metaData = this.metaData[index];
-			var insertionPositions = aNames.map(function(aName) {
-						return metaData.names.indexOf(aName);
-					})
-					.filter(function(aIndex) {
-						return aIndex > -1;
-					})
-					.sort();
-			if (!insertionPositions.length)
-				return;
-
-			var position = insertionPositions[0];
-			var entries = this._getEntriesAt(index);
-			entries.splice(entries.indexOf(aEntry), 1);
-			entries.splice(position, 0, aEntry);
-			this._setEntriesAt(entries, index);
-			log(' => moved (inserted) to level '+position, this.inOperationCount);
-
-			metaData.registerInsertionTarget(aEntry, aNames);
-		},
-		_checkInsertion : function(aEntry)
-		{
-			var name = aEntry.name;
-			var index = this.safeIndex;
-			var metaData = this.metaData[index];
-			if (!(name in metaData.insertionTargets))
-				return;
-
-			var entries = this._getEntriesAt(index);
-			var indexes = metaData
-					.insertionTargets[name]
-					.map(function(aEntry) {
-						return entries.indexOf(aEntry);
-					})
-					.sort()
-					.reverse();
-
-			if (!indexes.length)
-				return;
-
-			var position = indexes[0]+1;
-			var currentPosition = entries.indexOf(aEntry);
-			if (position < currentPosition)
-				return;
-
-			entries.splice(currentPosition, 1);
-			entries.splice(position, 0, aEntry);
-			this._setEntriesAt(entries, index);
-			log(' => moved (inserted) to level '+position, this.inOperationCount);
+				if (index == 0) {
+					this.entries.splice(index, 1);
+					this.metaData.splice(index, 1);
+					this.index--;
+				}
+				else {
+					this.metaData[i].children.splice(index-1, 1);
+				}
+				break;
+			}
 		},
 
 		get canUndo()
@@ -1011,29 +1200,6 @@
 			return this._getEntriesAt(this.entries.length-1);
 		},
 
-		_setEntriesAt : function(aEntries, aIndex)
-		{
-			if (aIndex < 0 || aIndex >= this.entries.length)
-				return aEntries;
-
-			this.metaData[aIndex].names = aEntries.map(function(aEntry) {
-					return aEntry.name;
-				});
-			var parent = aEntries[0];
-			var children = aEntries.slice(1);
-			this.entries[aIndex] = parent;
-			this.metaData[aIndex].children = children;
-			return aEntries;
-		},
-		set currentEntries(aEntries)
-		{
-			return this._setEntriesAt(aEntries, this.index);
-		},
-		set lastEntries(aEntries)
-		{
-			return this._setEntriesAt(aEntries, this.entries.length-1);
-		},
-
 		_getPromotionOptions : function(aArguments)
 		{
 			var entry, names = [];
@@ -1048,27 +1214,32 @@
 
 		toString : function()
 		{
-			var entries = this.entries;
-			var metaData = this.metaData;
-			var index = this.index;
-			var string = entries
-							.map(function(aEntry, aIndex) {
-								var children = metaData[aIndex].children.length;
-								children = children ? ' ('+children+')' : '' ;
-								var name = aEntry.name;
-								name = name ? ' ['+name+']' : '' ;
-								return (aIndex == index ? '*' : ' ' )+
-										' '+aIndex+': '+aEntry.label+
-										name+
-										children;
-							}, this)
-							.join('\n');
-			if (index < 0)
-				string = '* -1: -----\n' + string;
-			else if (index >= entries.length)
-				string += '\n* '+entries.length+': -----';
+			try {
+				var entries = this.entries;
+				var metaData = this.metaData;
+				var index = this.index;
+				var string = entries
+								.map(function(aEntry, aIndex) {
+									var children = metaData[aIndex].children.length;
+									children = children ? ' ('+children+')' : '' ;
+									var name = aEntry.name;
+									name = name ? ' ['+name+']' : '' ;
+									return (aIndex == index ? '*' : ' ' )+
+											' '+aIndex+': '+aEntry.label+
+											name+
+											children;
+								}, this)
+								.join('\n');
+				if (index < 0)
+					string = '* -1: -----\n' + string;
+				else if (index >= entries.length)
+					string += '\n* '+entries.length+': -----';
 
-			return this.key+'\n'+string;
+				return this.key+'\n'+string;
+			}
+			catch(e) {
+				return this.key+'\n'+e;
+			}
 		}
 	};
 
@@ -1147,28 +1318,38 @@
 		}
 	};
 
-	function ContinuationInfo()
+	function ScheduledTask(aTask, aInterval) 
 	{
-		this.called  = false;
-		this.allowed = false;
-		this.created = false;
-		this._done   = null;
+		this.task = aTask;
+		this.init(aInterval);
 	}
-	ContinuationInfo.prototype = {
-		get shouldWait()
+	ScheduledTask.prototype = {
+		init : function(aInterval)
 		{
-			return this.created && !this.called;
+			this.timer = Cc['@mozilla.org/timer;1']
+							.createInstance(Ci.nsITimer);
+			this.timer.init(this, aInterval, Ci.nsITimer.TYPE_REPEATING_SLACK);
 		},
-		get done()
+		cancel : function()
 		{
-			if (this._done !== null)
-				return this._done;
-			return !this.shouldWait;
+			try {
+				this.timer.cancel();
+			}
+			catch(e) {
+			}
+			delete this.timer;
+			delete this.task;
 		},
-		set done(aValue)
+		observe : function(aSubject, aTopic, aData)
 		{
-			this._done = aValue;
-			return aValue;
+			if (aTopic != 'timer-callback') return;
+			try {
+				if (this.task() === false)
+					this.cancel();
+			}
+			catch(e) {
+				this.cancel();
+			}
 		}
 	};
 
@@ -1176,7 +1357,7 @@
 	window['piro.sakura.ne.jp'].operationHistory.UIHistory         = UIHistory;
 	window['piro.sakura.ne.jp'].operationHistory.UIHistoryProxy    = UIHistoryProxy;
 	window['piro.sakura.ne.jp'].operationHistory.UIHistoryMetaData = UIHistoryMetaData;
-	window['piro.sakura.ne.jp'].operationHistory.ContinuationInfo  = ContinuationInfo;
+	window['piro.sakura.ne.jp'].operationHistory.ScheduledTask     = ScheduledTask;
 
 	window['piro.sakura.ne.jp'].operationHistory.init();
 })();

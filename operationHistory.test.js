@@ -21,7 +21,10 @@ function setUp()
 		};
 	utils.include('operationHistory.js', namespace, 'Shift_JIS');
 	sv = namespace.window['piro.sakura.ne.jp'].operationHistory;
-	sv._db = {};
+	sv._db = {
+		histories : {},
+		observerRegistered : true
+	};
 }
 
 function tearDown()
@@ -296,10 +299,13 @@ function test_undoRedo_continuation()
 
 	var info;
 
+	assert.isFalse(sv.isUndoing());
+	assert.isFalse(sv.isRedoing());
+
 	info = sv.undo(); // u2
 	assertHistoryCount(0, 2);
 	assert.isFalse(info.done);
-	assert.isTrue(sv.isUndoing());
+	assert.isTrue(sv.isUndoing(), uneval(info));
 	assert.isFalse(sv.isRedoing());
 	yield 600;
 	assert.isTrue(info.done);
@@ -331,12 +337,10 @@ function test_doUndoableTask()
 						},
 						{ label  : 'entry 2',
 						  onUndo : function(aInfo) {
-						    assert.isTrue(aInfo.processed);
 						    log.push(aInfo.level);
 						    log.push('u2');
 						  },
 						  onRedo : function(aInfo) {
-						    assert.isTrue(aInfo.processed);
 						    log.push(aInfo.level);
 						    log.push('r2');
 						  } }
@@ -344,27 +348,23 @@ function test_doUndoableTask()
 				},
 				{ label  : 'entry 1',
 				  onUndo : function(aInfo) {
-				    assert.isTrue(aInfo.processed);
 				    log.push(aInfo.level);
-				    if (aInfo.level) return false;
+				    return false;
 				    log.push('u1');
 				  },
 				  onRedo : function(aInfo) {
-				    assert.isTrue(aInfo.processed);
 				    log.push(aInfo.level);
-				    if (aInfo.level) return false;
+				    return false;
 				    log.push('r1');
 				  } }
 			);
 		},
 		{ label  : 'entry 0',
 		  onUndo : function(aInfo) {
-		    assert.isFalse(aInfo.processed);
 		    log.push(aInfo.level);
 		    log.push('u0');
 		  },
 		  onRedo : function(aInfo) {
-		    assert.isFalse(aInfo.processed);
 		    log.push(aInfo.level);
 		    log.push('r0');
 		  } }
@@ -377,7 +377,7 @@ function test_doUndoableTask()
 
 	sv.undo();
 	sv.redo();
-	assert.equals('0,u0,1,2,u2,0,r0,1,2,r2', log.join(','));
+	assert.equals('2,u2,1,0,u0,0,r0,1,2,r2', log.join(','));
 }
 
 function test_doUndoableTask_autoRegisterRedo()
@@ -411,7 +411,7 @@ function test_doUndoableTask_continuation()
 						  onUndo : function(aInfo) { log.push('u02'); },
 						  onRedo : function(aInfo) { log.push('r02'); } }
 					);
-					assert.isFalse(info.done);
+					assert.isTrue(info.done);
 				},
 				{ label  : 'entry 01',
 				  onUndo : function(aInfo) { log.push('u01'); },
@@ -420,7 +420,7 @@ function test_doUndoableTask_continuation()
 			window.setTimeout(function() {
 			  continuation();
 			}, 300);
-			assert.isFalse(info.done);
+			assert.isTrue(info.done);
 		},
 		{ label  : 'entry 00',
 		  onUndo : function(aInfo) { log.push('u00'); },
@@ -442,7 +442,7 @@ function test_doUndoableTask_continuation()
 						  onUndo : function(aInfo) { log.push('u12'); },
 						  onRedo : function(aInfo) { log.push('r12'); } }
 					);
-					assert.isFalse(info.done);
+					assert.isTrue(info.done);
 					window.setTimeout(function() {
 					  continuation();
 					}, 300);
@@ -457,15 +457,13 @@ function test_doUndoableTask_continuation()
 		  onUndo : function(aInfo) { log.push('u10'); },
 		  onRedo : function(aInfo) { log.push('r10'); } }
 	);
-	assert.isFalse(info.done);
-	yield 600;
 	assert.isTrue(info.done);
 
 	sv.undo();
 	sv.undo();
 	sv.redo();
 	sv.redo();
-	assert.equals('u10,u11,u12,u00,u01,u02,r00,r01,r02,r10,r11,r12', log.join(','));
+	assert.equals('u12,u11,u10,u02,u01,u00,r00,r01,r02,r10,r11,r12', log.join(','));
 }
 
 function test_exceptions()
@@ -494,7 +492,6 @@ function test_exceptions()
 					},
 					{ label  : 'entry 1',
 					  onUndo : function(aInfo) {
-					    throw 'EXCEPTION FROM UNDO PROCESS';
 					    log.push('u1');
 					  },
 					  onRedo : function(aInfo) {
@@ -505,6 +502,7 @@ function test_exceptions()
 			},
 			{ label  : 'entry 0',
 			  onUndo : function(aInfo) {
+			    throw 'EXCEPTION FROM UNDO PROCESS';
 			    log.push('u0');
 			  },
 			  onRedo : function(aInfo) {
@@ -519,7 +517,7 @@ function test_exceptions()
 	assert.raises('EXCEPTION FROM REDO PROCESS', function() {
 		sv.redo();
 	});
-	assert.equals('t0,t1,u0,r0', log.join(','));
+	assert.equals('t0,t1,u1,r0', log.join(','));
 }
 
 
@@ -783,23 +781,6 @@ function test_UIHistory_namedEntry()
 	assert.equals('0,1,2,3', history.metaData[history.safeIndex].names.join(','));
 }
 
-function test_UIHistory_insertBefore()
-{
-	var history = new sv.UIHistory('test', null, null);
-
-	history.addEntry({ name : '0' });
-	var metaData = history.lastMetaData;
-
-	history.inOperation = true;
-	history.addEntry({ name : '1', insertBefore : ['0','3'] });
-	assert.equals('1,0', metaData.names.join(','));
-	history.addEntry({ name : '2', insertBefore : '0' });
-	assert.equals('1,2,0', metaData.names.join(','));
-	history.addEntry({ name : '3' });
-	assert.equals('1,2,0,3', metaData.names.join(','));
-	history.inOperation = false;
-}
-
 
 function test_UIHistoryProxy_index()
 {
@@ -831,32 +812,3 @@ function test_UIHistoryMetaData_children()
 	assert.equals([], metaData.children);
 }
 
-
-function test_ContinuationInfo_done()
-{
-	var info;
-
-	info = new sv.ContinuationInfo();
-	assert.isTrue(info.done);
-	assert.isFalse(info.shouldWait);
-	info.created = true;
-	assert.isFalse(info.done);
-	assert.isTrue(info.shouldWait);
-	info.called = true;
-	assert.isTrue(info.done);
-	assert.isFalse(info.shouldWait);
-
-	info = new sv.ContinuationInfo();
-	info.done = false;
-	assert.isFalse(info.done);
-	assert.isFalse(info.shouldWait);
-	info.created = true;
-	assert.isFalse(info.done);
-	assert.isTrue(info.shouldWait);
-	info.called = true;
-	assert.isFalse(info.done);
-	assert.isFalse(info.shouldWait);
-	info.done = true;
-	assert.isTrue(info.done);
-	assert.isFalse(info.shouldWait);
-}
