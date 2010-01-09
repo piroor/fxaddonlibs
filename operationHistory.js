@@ -74,7 +74,7 @@
    http://www.cozmixng.org/repos/piro/fx3-compatibility-lib/trunk/operationHistory.test.js
 */
 (function() {
-	const currentRevision = 44;
+	const currentRevision = 45;
 
 	if (!('piro.sakura.ne.jp' in window)) window['piro.sakura.ne.jp'] = {};
 
@@ -161,15 +161,6 @@
 				!this._getUndoingState(options.key) &&
 				!this._getRedoingState(options.key)
 				) {
-				let f = this._getAvailableFunction(entry.onRedo, entry.onredo, entry.redo);
-				if (
-					!f &&
-					!('onRedo' in entry) &&
-					!('onredo' in entry) &&
-					!('redo' in entry) &&
-					options.task
-					)
-					entry.onRedo = options.task;
 				history.addEntry(entry);
 				registered = true;
 			}
@@ -284,29 +275,32 @@
 						{
 							let entry = entries[i];
 							log('level '+(max-i)+' '+entry.label, 2);
-							let f = self._getAvailableFunction(entry.onUndo, entry.onundo, entry.undo);
-							if (!f) return;
 							let done = true;
-							try {
-								let info = {
-										level   : max-i,
-										manager : self,
-										window  : window,
-										getContinuation : function() {
-											done = false;
-											return function() {
-												done = true;
-											};
-										}
-									};
-								if (f.call(entry, info) !== false)
-									oneProcessed = true;
+							let f = self._getAvailableFunction(entry.onUndo, entry.onundo, entry.undo);
+							let info = {
+									level   : max-i,
+									manager : self,
+									window  : window,
+									getContinuation : function() {
+										done = false;
+										return function() {
+											done = true;
+										};
+									}
+								};
+							if (f) {
+								try {
+									if (f.call(entry, info) !== false)
+										oneProcessed = true;
+								}
+								catch(e) {
+									log(e, 2);
+									error = e;
+									break;
+								}
 							}
-							catch(e) {
-								log(e, 2);
-								error = e;
-								break;
-							}
+							if (self._dispatchEvent('UIOperationHistoryUndo:'+options.name, entry, info) !== false)
+								oneProcessed = true;
 							while (!done)
 							{
 								yield true;
@@ -381,29 +375,32 @@
 						{
 							let entry = entries[i];
 							log('level '+(i)+' '+entry.label, 2);
-							let f = self._getAvailableFunction(entry.onRedo, entry.onredo, entry.redo);
-							if (!f) return;
 							let done = true;
-							try {
-								let info = {
-										level   : i,
-										manager : self,
-										window  : window,
-										getContinuation : function() {
-											done = false;
-											return function() {
-												done = true;
-											};
-										}
-									};
-								if (f.call(entry, info) !== false)
-									oneProcessed = true;
+							let info = {
+									level   : i,
+									manager : self,
+									window  : window,
+									getContinuation : function() {
+										done = false;
+										return function() {
+											done = true;
+										};
+									}
+								};
+							let f = self._getAvailableFunction(entry.onRedo, entry.onredo, entry.redo);
+							if (f) {
+								try {
+									if (f.call(entry, info) !== false)
+										oneProcessed = true;
+								}
+								catch(e) {
+									log(e, 2);
+									error = e;
+									break;
+								}
 							}
-							catch(e) {
-								log(e, 2);
-								error = e;
-								break;
-							}
+							if (self._dispatchEvent('UIOperationHistoryRedo:'+options.name, entry, info) !== false)
+								oneProcessed = true;
 							while (!done)
 							{
 								yield true;
@@ -813,6 +810,17 @@
 			window.removeEventListener('unload', this, false);
 		},
 
+		_dispatchEvent : function(aType, aEntry, aInfo)
+		{
+			var d = aInfo.window ? aInfo.window.document : document ;
+			var event = d.createEvent('Events');
+			event.initEvent(aType, true, false);
+			event.entry = aEntry;
+			event.params = aInfo;
+			event.paramaterss = aInfo;
+			d.dispatchEvent(event);
+		},
+
 		_evaluateXPath : function(aExpression, aContext, aType) 
 		{
 			try {
@@ -927,9 +935,8 @@
 		_getAvailableFunction : function()
 		{
 			var functions = Array.slice(arguments);
-			for (var i in functions)
+			for each (var f in functions)
 			{
-				let f = functions[i];
 				if (f && typeof f == 'function')
 					return f;
 			}
