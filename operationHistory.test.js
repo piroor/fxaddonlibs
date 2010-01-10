@@ -153,7 +153,7 @@ function test_undoRedo_simple()
 	assert.isFalse(sv.isRedoing());
 
 	sv.addEntry({ name   : 'entry 1',
-	              label  : 'entry  1',
+	              label  : 'entry 1',
 	              onUndo : function() {
 	                log.push('u1');
 	                assert.isTrue(sv.isUndoing());
@@ -165,7 +165,7 @@ function test_undoRedo_simple()
 	                assert.isTrue(sv.isRedoing());
 	              } });
 	sv.addEntry({ name   : 'entry 2',
-	              label  : 'entry  2',
+	              label  : 'entry 2',
 	              onUndo : function() {
 	                log.push('u2');
 	                assert.isTrue(sv.isUndoing());
@@ -200,15 +200,15 @@ function test_undoRedo_simple()
 function test_undoRedo_complex()
 {
 	sv.addEntry({ name   : 'entry 1',
-	              label  : 'entry  1',
+	              label  : 'entry 1',
 	              onUndo : function() { log.push('u1'); sv.undo(); },
 	              onRedo : function() { log.push('r1'); } });
 	sv.addEntry({ name   : 'entry 2',
-	              label  : 'entry  2',
+	              label  : 'entry 2',
 	              onUndo : function() { log.push('u2'); },
 	              onRedo : function() { log.push('r2'); sv.redo(); } });
 	sv.addEntry({ name   : 'entry 3',
-	              label  : 'entry  3',
+	              label  : 'entry 3',
 	              onUndo : function() { log.push('u3'); sv.undo(); },
 	              onRedo : function() { log.push('r3'); sv.redo(); } });
 
@@ -250,8 +250,9 @@ function test_undoRedo_complex()
 	sv.redo(); // r2
 	assertHistoryCount(1, 3);
 
+	log.push('----insert');
 	sv.addEntry({ name   : 'entry 4',
-	              label  : 'entry  4',
+	              label  : 'entry 4',
 	              onUndo : function() { log.push('u4'); sv.addEntry({ label: 'invalid/undo' }); },
 	              onRedo : function() { log.push('r4'); sv.addEntry({ label: 'invalid/redo' }); } });
 	assertHistoryCount(2, 3);
@@ -271,6 +272,11 @@ function test_undoRedo_complex()
 	assertHistoryCount(1, 3);
 	sv.redo(); // r4
 	assertHistoryCount(2, 3);
+
+	log.push('----goToIndex back');
+	sv.goToIndex(0);
+	log.push('----goToIndex forward');
+	sv.goToIndex(2);
 
 	assert.equals(
 		toSimpleList(<![CDATA[
@@ -300,6 +306,7 @@ function test_undoRedo_complex()
 			UIOperationHistoryRedo:global entry 1
 			r2
 			UIOperationHistoryRedo:global entry 2
+			----insert
 			u4
 			UIOperationHistoryUndo:global entry 4
 			r4
@@ -312,6 +319,16 @@ function test_undoRedo_complex()
 			UIOperationHistoryUndo:global entry 1
 			r1
 			UIOperationHistoryRedo:global entry 1
+			r2
+			UIOperationHistoryRedo:global entry 2
+			r4
+			UIOperationHistoryRedo:global entry 4
+			----goToIndex back
+			u4
+			UIOperationHistoryUndo:global entry 4
+			u2
+			UIOperationHistoryUndo:global entry 2
+			----goToIndex forward
 			r2
 			UIOperationHistoryRedo:global entry 2
 			r4
@@ -354,10 +371,13 @@ function test_undoRedo_skip()
 
 	assertHistoryCount(3, 4);
 	sv.undo(); // u normal
+	log.push('----');
 	assertHistoryCount(2, 4);
 	sv.undo(); // u both, u undo, u redo
+	log.push('----');
 	assertHistoryCount(0, 4);
 	sv.redo(); // r redo, r undo
+	log.push('----');
 	assertHistoryCount(1, 4);
 	sv.redo(); // r both, r normal
 	assertHistoryCount(3, 4);
@@ -366,16 +386,19 @@ function test_undoRedo_skip()
 		toSimpleList(<![CDATA[
 			u normal
 			UIOperationHistoryUndo:global normal
+			----
 			u both
 			UIOperationHistoryUndo:global skip both
 			u undo
 			UIOperationHistoryUndo:global skip undo
 			u redo
 			UIOperationHistoryUndo:global skip redo
+			----
 			r redo
 			UIOperationHistoryRedo:global skip redo
 			r undo
 			UIOperationHistoryRedo:global skip undo
+			----
 			r both
 			UIOperationHistoryRedo:global skip both
 			r normal
