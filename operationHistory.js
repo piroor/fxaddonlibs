@@ -5,7 +5,7 @@
    var OH = window['piro.sakura.ne.jp'].operationHistory;
 
    // window specific history
-   OH.doUndoableTask(
+   OH.doOperation(
      // the task which is undo-able (optional)
      function() {
        MyService.myProp = newValue;
@@ -28,7 +28,7 @@
    OH.redo('MyAddonFeature', window);
 
    // global history (not associated to window)
-   OH.doUndoableTask(
+   OH.doOperation(
      function() { ... }, // task
      'MyAddonFeature',
      { ... }
@@ -36,17 +36,17 @@
    OH.undo('MyAddonFeature');
 
    // anonymous, window specific
-   OH.doUndoableTask(function() { ... }, { ... }, window);
+   OH.doOperation(function() { ... }, { ... }, window);
    OH.undo(window);
 
    // anonymous, global
-   OH.doUndoableTask(function() { ... }, { ... });
+   OH.doOperation(function() { ... }, { ... });
    OH.undo();
 
    // When you want to use "window" object in the global history,
    // you should use the ID string instead of the "window" object
    // to reduce memory leak. For example...
-   OH.doUndoableTask(
+   OH.doOperation(
      function() {
        targetWindow.MyAddonService.myProp = newValue;
      },
@@ -74,7 +74,7 @@
    http://www.cozmixng.org/repos/piro/fx3-compatibility-lib/trunk/operationHistory.test.js
 */
 (function() {
-	const currentRevision = 47;
+	const currentRevision = 48;
 
 	if (!('piro.sakura.ne.jp' in window)) window['piro.sakura.ne.jp'] = {};
 
@@ -143,15 +143,21 @@
 
 		addEntry : function()
 		{
-			this.doUndoableTask.apply(this, arguments);
+			this.doOperation.apply(this, arguments);
 		},
 
+		// old name, for backward compatibility
 		doUndoableTask : function()
+		{
+			this.doOperation.apply(this, arguments);
+		},
+
+		doOperation : function()
 		{
 			var options = this._getHistoryOptionsFromArguments(arguments);
 			var history = options.history;
 			var entry = options.entry;
-			log('doUndoableTask start '+options.name+' ('+options.windowId+')'+
+			log('doOperation start '+options.name+' ('+options.windowId+')'+
 				'\n  '+entry.label,
 				history.inOperationCount);
 
@@ -202,13 +208,15 @@
 				var onFinish = function() {
 						if (registered && canceled === false) {
 							history.removeEntry(entry);
-							log('  => doUndoableTask canceled : '+history.inOperation+
-								'\n'+history.toString(),
+							log('  => doOperation canceled : '+history.inOperation+'\n'+
+								((history.inOperationCount ? entry.label : history.toString())
+									.replace(/^/gm, '    ')),
 								history.inOperationCount);
 						}
 						history.inOperation = false;
-						log('  => doUndoableTask done / '+history.inOperation+
-							'\n'+history.toString(),
+						log('  => doOperation done / '+history.inOperation+'\n'+
+							((history.inOperationCount ? entry.label : history.toString())
+								.replace(/^/gm, '    ')),
 							history.inOperationCount);
 					};
 
@@ -535,6 +543,7 @@
 				if (currentEntries.indexOf(aOptions.currentEntry) > -1) {
 					return;
 				}
+				log(name+' / '+currentEntries.lengty, 5);
 				if (currentEntries.indexOf(aEntry) > -1) {
 					log(name+' is synced for '+aIndex+' ('+aEntry.label+')', 5);
 					history.index--;

@@ -325,14 +325,14 @@ function test_undoRedo_continuation()
 	assert.equals('u2,r2', log.join(','));
 }
 
-function test_doUndoableTask()
+function test_doOperation()
 {
 	var log = [];
-	var info = sv.doUndoableTask(
+	var info = sv.doOperation(
 		function() {
-			sv.doUndoableTask(
+			sv.doOperation(
 				function() {
-					sv.doUndoableTask(
+					sv.doOperation(
 						function() {
 						},
 						{ label  : 'entry 2',
@@ -380,10 +380,10 @@ function test_doUndoableTask()
 	assert.equals('2,u2,1,0,u0,0,r0,1,2,r2', log.join(','));
 }
 
-function test_doUndoableTask_autoRegisterRedo()
+function test_doOperation_autoRegisterRedo()
 {
 	var task = function() { var foo = 'bar'; };
-	sv.doUndoableTask(
+	sv.doOperation(
 		task,
 		{ label  : 'entry 1',
 		  onUndo : function() { return true; } }
@@ -393,18 +393,18 @@ function test_doUndoableTask_autoRegisterRedo()
 	assert.equals(task, history.entries[0].onRedo);
 }
 
-function test_doUndoableTask_continuation()
+function test_doOperation_continuation()
 {
 	var log = [];
 	var info;
 
 	var history = sv.getHistory();
-	info = sv.doUndoableTask(
+	info = sv.doOperation(
 		function(aInfo) {
 			var continuation = aInfo.getContinuation();
-			var info = sv.doUndoableTask(
+			var info = sv.doOperation(
 				function(aInfo) {
-					var info = sv.doUndoableTask(
+					var info = sv.doOperation(
 						function(aInfo) {
 						},
 						{ label  : 'entry 02',
@@ -430,12 +430,12 @@ function test_doUndoableTask_continuation()
 	yield 600;
 	assert.isTrue(info.done);
 
-	info = sv.doUndoableTask(
+	info = sv.doOperation(
 		function(aInfo) {
-			var info = sv.doUndoableTask(
+			var info = sv.doOperation(
 				function(aInfo) {
 					var continuation = aInfo.getContinuation();
-					var info = sv.doUndoableTask(
+					var info = sv.doOperation(
 						function(aInfo) {
 						},
 						{ label  : 'entry 12',
@@ -470,14 +470,14 @@ function test_exceptions()
 {
 	var log = [];
 	assert.raises('EXCEPTION FROM UNDOABLE TASK', function() {
-		sv.doUndoableTask(
+		sv.doOperation(
 			function() {
 				log.push('t0');
-				sv.doUndoableTask(
+				sv.doOperation(
 					function() {
 						log.push('t1');
 						throw 'EXCEPTION FROM UNDOABLE TASK';
-						sv.doUndoableTask(
+						sv.doOperation(
 							function() {
 								log.push('t2');
 							},
