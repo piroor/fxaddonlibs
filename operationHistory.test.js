@@ -385,7 +385,7 @@ function test_undoRedo_skip()
 	);
 }
 
-function test_undoRedo_continuation()
+function test_undoRedo_wait()
 {
 	sv.addEntry({ name   : 'normal',
 	              label  : 'normal',
@@ -396,16 +396,16 @@ function test_undoRedo_continuation()
 	              label  : 'delayed',
 	              onUndo : function(aInfo) {
 	                log.push('u delayed');
-	                var continuation = aInfo.getContinuation();
+	                aInfo.wait();
 	                window.setTimeout(function() {
-	                  continuation();
+	                  aInfo.continue();
 	                }, 300);
 	              },
 	              onRedo : function(aInfo) {
 	                log.push('r delayed');
-	                var continuation = aInfo.getContinuation();
+	                aInfo.wait();
 	                window.setTimeout(function() {
-	                  continuation();
+	                  aInfo.continue();
 	                }, 300);
 	              }
 	            });
@@ -551,7 +551,7 @@ function test_doOperation()
 	);
 }
 
-function test_doOperation_continuation()
+function test_doOperation_wait()
 {
 	var info;
 
@@ -559,7 +559,7 @@ function test_doOperation_continuation()
 	info = sv.doOperation(
 		function(aInfo) {
 			log.push('op delayed parent');
-			var continuation = aInfo.getContinuation();
+			aInfo.wait();
 			var info = sv.doOperation(
 				function(aInfo) {
 					log.push('op normal child');
@@ -570,7 +570,7 @@ function test_doOperation_continuation()
 				  onRedo : function(aInfo) { log.push('r normal child'); } }
 			);
 			window.setTimeout(function() {
-			  continuation();
+			  aInfo.continue();
 			}, 300);
 			assert.isTrue(info.done);
 		},
@@ -589,9 +589,9 @@ function test_doOperation_continuation()
 			var info = sv.doOperation(
 				function(aInfo) {
 					log.push('op delayed child');
-					var continuation = aInfo.getContinuation();
+					aInfo.wait();
 					window.setTimeout(function() {
-					  continuation();
+					  aInfo.continue();
 					}, 300);
 				},
 				{ name   : 'delayed child',

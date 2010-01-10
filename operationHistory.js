@@ -74,7 +74,7 @@
    http://www.cozmixng.org/repos/piro/fx3-compatibility-lib/trunk/operationHistory.test.js
 */
 (function() {
-	const currentRevision = 49;
+	const currentRevision = 50;
 
 	if (!('piro.sakura.ne.jp' in window)) window['piro.sakura.ne.jp'] = {};
 
@@ -186,11 +186,14 @@
 									level   : history.inOperationCount-1,
 									manager : self,
 									window  : window,
-									getContinuation : function() {
+									wait    : function() {
 										done.done = false;
 										return function() {
-											done.done = true;
-										};
+												done.done = true;
+											};
+									},
+									continue : function() {
+										done.done = true;
 									}
 								}
 							);
@@ -271,12 +274,15 @@
 
 			var self = this;
 			var iterator = (function() {
+					var shouldStop = false;
 					do {
 						let entries = history.currentEntries;
 						--history.index;
+
 						if (!entries.length) continue;
+						shouldStop = true;
+
 						log((history.index+1)+' '+entries[0].label, 1);
-						let oneProcessed = false;
 						let max = entries.length-1;
 						entries = Array.slice(entries).reverse();
 						for (let i in entries)
@@ -289,31 +295,43 @@
 									level   : max-i,
 									manager : self,
 									window  : window,
-									getContinuation : function() {
+									wait    : function() {
 										done = false;
 										return function() {
-											done = true;
-										};
+												done.done = true;
+											};
+									},
+									continue : function() {
+										done = true;
+									},
+									skip : function() {
+										shouldStop = false;
 									}
 								};
 							if (f) {
 								try {
-									if (f.call(entry, info) !== false)
-										oneProcessed = true;
+									if (f.call(entry, info) === false) {
+										shouldStop = true;
+										break;
+									}
 								}
 								catch(e) {
 									log(e, 2);
 									error = e;
+									shouldStop = true;
 									break;
 								}
 							}
 							try {
-								if (self._dispatchEvent('UIOperationHistoryUndo:'+options.name, entry, info) !== false)
-									oneProcessed = true;
+								if (!self._dispatchEvent('UIOperationHistoryUndo:'+options.name, entry, info)) {
+									shouldStop = true;
+									break;
+								}
 							}
 							catch(e) {
 								log(e, 2);
 								error = e;
+								shouldStop = true;
 								break;
 							}
 							while (!done)
@@ -321,10 +339,8 @@
 								yield true;
 							}
 						}
-						if (error) break;
-						processed = oneProcessed;
 					}
-					while (processed === false && history.canUndo);
+					while (!shouldStop && history.canUndo);
 				})();
 
 			var onFinish = function() {
@@ -379,13 +395,16 @@
 
 			var self = this;
 			var iterator = (function() {
-					while (processed === false && history.canRedo)
+					var shouldStop = false;
+					while (!shouldStop && history.canRedo)
 					{
 						++history.index;
 						let entries = history.currentEntries;
+
 						if (!entries.length) continue;
+						shouldStop = true;
+
 						log((history.index)+' '+entries[0].label, 1);
-						let oneProcessed = false;
 						for (let i in entries)
 						{
 							let entry = entries[i];
@@ -395,32 +414,44 @@
 									level   : i,
 									manager : self,
 									window  : window,
-									getContinuation : function() {
+									wait    : function() {
 										done = false;
 										return function() {
-											done = true;
-										};
+												done.done = true;
+											};
+									},
+									continue : function() {
+										done = true;
+									},
+									skip : function() {
+										shouldStop = false;
 									}
 								};
 							let f = self._getAvailableFunction(entry.onRedo, entry.onredo, entry.redo);
 							if (f) {
 								try {
-									if (f.call(entry, info) !== false)
-										oneProcessed = true;
+									if (f.call(entry, info) === false) {
+										shouldStop = true;
+										break;
+									}
 								}
 								catch(e) {
 									log(e, 2);
 									error = e;
+									shouldStop = true;
 									break;
 								}
 							}
 							try {
-								if (self._dispatchEvent('UIOperationHistoryRedo:'+options.name, entry, info) !== false)
-									oneProcessed = true;
+								if (!self._dispatchEvent('UIOperationHistoryRedo:'+options.name, entry, info)) {
+									shouldStop = true;
+									break;
+								}
 							}
 							catch(e) {
 								log(e, 2);
 								error = e;
+								shouldStop = true;
 								break;
 							}
 							while (!done)
@@ -428,8 +459,6 @@
 								yield true;
 							}
 						}
-						if (error) break;
-						processed = oneProcessed;
 					}
 				})();
 
@@ -858,11 +887,16 @@
 			var d = aInfo.window ? aInfo.window.document : document ;
 			var event = d.createEvent('Events');
 			event.initEvent(aType, true, true);
+
 			event.entry = aEntry;
 			event.params = aInfo;
 			event.paramaterss = aInfo;
 			event.manager = this;
-			event.getContinuation = aInfo.getContinuation;
+
+			event.wait     = aInfo.wait;
+			event.continue = aInfo.continue;
+			event.skip     = aInfo.skip;
+
 			var result = d.dispatchEvent(event);
 			log('event dispacthed: '+aType+' ('+result+')', 3);
 			return result;
