@@ -74,7 +74,7 @@
    http://www.cozmixng.org/repos/piro/fx3-compatibility-lib/trunk/operationHistory.test.js
 */
 (function() {
-	const currentRevision = 46;
+	const currentRevision = 47;
 
 	if (!('piro.sakura.ne.jp' in window)) window['piro.sakura.ne.jp'] = {};
 
@@ -527,7 +527,7 @@
 
 			var name = aOptions.name || 'window';
 
-			log('syncWindowHistoryFocus for '+name+' ('+aOptions.currentEntry.label+')');
+			log('syncWindowHistoryFocus for '+name+' ('+aOptions.currentEntry.label+')', 4);
 
 			aOptions.entries.forEach(function(aEntry, aIndex) {
 				var history = this.getHistory(name, aOptions.windows[aIndex]);
@@ -536,7 +536,7 @@
 					return;
 				}
 				if (currentEntries.indexOf(aEntry) > -1) {
-					log(name+' is synced for '+aIndex+' ('+aEntry.label+')');
+					log(name+' is synced for '+aIndex+' ('+aEntry.label+')', 5);
 					history.index--;
 				}
 			}, this);
@@ -814,13 +814,15 @@
 		{
 			var d = aInfo.window ? aInfo.window.document : document ;
 			var event = d.createEvent('Events');
-			event.initEvent(aType, true, false);
+			event.initEvent(aType, true, true);
 			event.entry = aEntry;
 			event.params = aInfo;
 			event.paramaterss = aInfo;
 			event.manager = this;
 			event.getContinuation = aInfo.getContinuation;
-			d.dispatchEvent(event);
+			var result = d.dispatchEvent(event);
+			log('event dispacthed: '+aType+' ('+result+')', 3);
+			return result;
 		},
 
 		_evaluateXPath : function(aExpression, aContext, aType) 
