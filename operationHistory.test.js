@@ -43,6 +43,11 @@ function tearDown()
 	window.removeEventListener('UIOperationHistoryRedo:global', handleEvent, false);
 }
 
+
+function test_setWindowId()
+{
+}
+
 test_getWindowId.setUp = windowSetUp;
 test_getWindowId.tearDown = windowTearDown;
 function test_getWindowId()
@@ -65,6 +70,38 @@ function test_getWindowById()
 
 	windowFromId = sv.getWindowById('does not exist!');
 	assert.isNull(windowFromId);
+}
+
+function test_setElementId()
+{
+}
+
+function test_getElementId()
+{
+}
+
+function test_getElementById()
+{
+}
+
+function test_setParentId()
+{
+}
+
+function test_getParentId()
+{
+}
+
+function test_getId()
+{
+}
+
+function test_getTargetById()
+{
+}
+
+function test_getTargetsByIds()
+{
 }
 
 
@@ -197,7 +234,7 @@ function test_undoRedo_simple()
 	);
 }
 
-function test_undoRedo_complex()
+function test_undoRedo_goToIndex()
 {
 	sv.addEntry({ name   : 'entry 1',
 	              label  : 'entry 1',
@@ -469,6 +506,10 @@ function test_undoRedo_wait()
 		]]>),
 		log.join('\n')
 	);
+}
+
+function test_fakeUndoRedo()
+{
 }
 
 function test_doOperation()

@@ -706,7 +706,7 @@
 			return id;
 		},
 
-		setBindingParentId : function(aNode, aDefaultId)
+		setBindingParentId : function(aNode, aDefaultId) // => planned to be removed or updated...
 		{
 			var parent = aNode.ownerDocument.getBindingParent(aNode);
 			return parent ? this.setElementId(parent, aDefaultId) : null ;
@@ -749,7 +749,7 @@
 			throw new Error(aTarget+' is an unknown type item.');
 		},
 
-		getBindingParentId : function(aNode, aDefaultId)
+		getBindingParentId : function(aNode, aDefaultId) // => planned to be removed or updated...
 		{
 			var parent = aNode.ownerDocument.getBindingParent(aNode);
 			return parent ? this.getId(parent, aDefaultId) : null ;
@@ -792,7 +792,7 @@
 				}, this);
 		},
 
-		getRelatedTargetsByIds : function(aIds, aRootParent) 
+		getRelatedTargetsByIds : function(aIds, aRootParent) // => planned to be removed or updated...
 		{
 			var results = [];
 			var lastParent = aRootParent;
