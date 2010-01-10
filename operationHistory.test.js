@@ -282,22 +282,28 @@ function test_undoRedo_simple()
 	                assert.isFalse(sv.isUndoing());
 	                assert.isTrue(sv.isRedoing());
 	              } });
+	sv.addEntry({ name   : 'entry 3',
+	              label  : 'entry 3' });
 
-	assertHistoryCount(1, 2);
+	assertHistoryCount(2, 3);
+	assert.isTrue(sv.undo().done); // entry 3
 	assert.isTrue(sv.undo().done); // u2
 	assert.isFalse(sv.isUndoing());
 	assert.isFalse(sv.isRedoing());
-	assertHistoryCount(0, 2);
+	assertHistoryCount(0, 3);
 	assert.isTrue(sv.redo().done); // r2
+	assert.isTrue(sv.redo().done); // entry 3
 	assert.isFalse(sv.isUndoing());
 	assert.isFalse(sv.isRedoing());
 
 	assert.equals(
 		toSimpleList(<![CDATA[
+			UIOperationHistoryUndo:global entry 3
 			u2
 			UIOperationHistoryUndo:global entry 2
 			r2
 			UIOperationHistoryRedo:global entry 2
+			UIOperationHistoryRedo:global entry 3
 		]]>),
 		log.join('\n')
 	);
@@ -307,16 +313,16 @@ function test_undoRedo_goToIndex()
 {
 	sv.addEntry({ name   : 'entry 1',
 	              label  : 'entry 1',
-	              onUndo : function() { log.push('u1'); sv.undo(); },
+	              onUndo : function() { log.push('u1'); sv.undo(); /* <= this should be ignored */ },
 	              onRedo : function() { log.push('r1'); } });
 	sv.addEntry({ name   : 'entry 2',
 	              label  : 'entry 2',
 	              onUndo : function() { log.push('u2'); },
-	              onRedo : function() { log.push('r2'); sv.redo(); } });
+	              onRedo : function() { log.push('r2'); sv.redo(); /* <= this should be ignored */ } });
 	sv.addEntry({ name   : 'entry 3',
 	              label  : 'entry 3',
-	              onUndo : function() { log.push('u3'); sv.undo(); },
-	              onRedo : function() { log.push('r3'); sv.redo(); } });
+	              onUndo : function() { log.push('u3'); sv.undo(); /* <= this should be ignored */ },
+	              onRedo : function() { log.push('r3'); sv.redo(); /* <= this should be ignored */ } });
 
 	assertHistoryCount(2, 3);
 	sv.undo(); // u3
@@ -577,10 +583,6 @@ function test_undoRedo_wait()
 	);
 }
 
-function test_fakeUndoRedo()
-{
-}
-
 function test_doOperation()
 {
 	var info = sv.doOperation(
@@ -754,7 +756,6 @@ function test_doOperation_wait()
 {
 	var info;
 
-	var history = sv.getHistory();
 	info = sv.doOperation(
 		function(aInfo) {
 			log.push('op delayed parent');
@@ -837,6 +838,134 @@ function test_doOperation_wait()
 		]]>),
 		log.join('\n')
 	);
+}
+
+test_fakeUndoRedo.setUp = windowSetUp;
+test_fakeUndoRedo.tearDown = windowTearDown;
+function test_fakeUndoRedo()
+{
+	var parent = [];
+	var child = [];
+
+	sv.doOperation(
+		function(aInfo) {
+			sv.doOperation(
+				function(aInfo) {
+				},
+				win,
+				(child[0] = {
+					name  : 'child0',
+					label : 'child0'
+				})
+			);
+		},
+		win,
+		(parent[0] = {
+			name  : 'parent0',
+			label : 'parent0'
+		})
+	);
+	sv.doOperation(
+		function(aInfo) {
+			sv.doOperation(
+				function(aInfo) {
+				},
+				win,
+				(child[1] = {
+					name  : 'child1',
+					label : 'child1'
+				})
+			);
+		},
+		win,
+		(parent[1] = {
+			name  : 'parent1',
+			label : 'parent1'
+		})
+	);
+	sv.doOperation(
+		function(aInfo) {
+			sv.doOperation(
+				function(aInfo) {
+				},
+				win,
+				(child[2] = {
+					name  : 'child2',
+					label : 'child2'
+				})
+			);
+		},
+		win,
+		(parent[2] = {
+			name  : 'parent2',
+			label : 'parent2'
+		})
+	);
+
+	var history = sv.getHistory(win);
+	assert.equals(2, history.index);
+
+	function assertFakeUndoSuccess(aCurrent, aEntry, aExpected)
+	{
+		history.index = aCurrent;
+		sv.fakeUndo(aEntry, win);
+		assert.equals(aExpected, history.index);
+		assert.equals([], log);
+	}
+
+	function assertFakeUndoFail(aCurrent, aEntry)
+	{
+		history.index = aCurrent;
+		sv.fakeUndo(aEntry, win);
+		var current = Math.min(aCurrent, history.entries.length-1);
+		assert.equals(current, history.index);
+		assert.equals([], log);
+	}
+
+	assertFakeUndoFail(2, parent[0]);
+	assertFakeUndoSuccess(2, parent[1], 0);
+	assertFakeUndoSuccess(2, parent[2], 1);
+	assertFakeUndoFail(3, parent[0]);
+	assertFakeUndoFail(3, parent[1]);
+	assertFakeUndoSuccess(3, parent[2], 1);
+
+	assertFakeUndoFail(2, child[0]);
+	assertFakeUndoSuccess(2, child[1], 0);
+	assertFakeUndoSuccess(2, child[2], 1);
+	assertFakeUndoFail(3, child[0]);
+	assertFakeUndoFail(3, child[1]);
+	assertFakeUndoSuccess(3, child[2], 1);
+
+	function assertFakeRedoSuccess(aCurrent, aEntry, aExpected)
+	{
+		history.index = aCurrent;
+		sv.fakeRedo(aEntry, win);
+		assert.equals(aExpected, history.index);
+		assert.equals([], log);
+	}
+
+	function assertFakeRedoFail(aCurrent, aEntry)
+	{
+		history.index = aCurrent;
+		sv.fakeRedo(aEntry, win);
+		var current = Math.max(aCurrent, 0);
+		assert.equals(current, history.index);
+		assert.equals([], log);
+	}
+
+	assertFakeRedoSuccess(-1, parent[0], 1);
+	assertFakeRedoFail(-1, parent[1]);
+	assertFakeRedoFail(-1, parent[2]);
+	assertFakeRedoSuccess(0, parent[0], 1);
+	assertFakeRedoSuccess(0, parent[1], 2);
+	assertFakeRedoFail(0, parent[2]);
+
+	assertFakeRedoSuccess(-1, child[0], 1);
+	assertFakeRedoFail(-1, child[1]);
+	assertFakeRedoFail(-1, child[2]);
+	assertFakeRedoSuccess(0, child[0], 1);
+	assertFakeRedoSuccess(0, child[1], 2);
+	assertFakeRedoFail(0, child[2]);
 }
 
 function test_exceptions()
