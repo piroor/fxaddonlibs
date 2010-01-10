@@ -152,8 +152,8 @@ function test_undoRedo_simple()
 	assert.isFalse(sv.isUndoing());
 	assert.isFalse(sv.isRedoing());
 
-	sv.addEntry({ name   : 'anonymous-1',
-	              label  : 'anonymous 1',
+	sv.addEntry({ name   : 'entry 1',
+	              label  : 'entry  1',
 	              onUndo : function() {
 	                log.push('u1');
 	                assert.isTrue(sv.isUndoing());
@@ -164,8 +164,8 @@ function test_undoRedo_simple()
 	                assert.isFalse(sv.isUndoing());
 	                assert.isTrue(sv.isRedoing());
 	              } });
-	sv.addEntry({ name   : 'anonymous-2',
-	              label  : 'anonymous 2',
+	sv.addEntry({ name   : 'entry 2',
+	              label  : 'entry  2',
 	              onUndo : function() {
 	                log.push('u2');
 	                assert.isTrue(sv.isUndoing());
@@ -189,9 +189,9 @@ function test_undoRedo_simple()
 	assert.equals(
 		toSimpleList(<![CDATA[
 			u2
-			UIOperationHistoryUndo:global anonymous-2
+			UIOperationHistoryUndo:global entry 2
 			r2
-			UIOperationHistoryRedo:global anonymous-2
+			UIOperationHistoryRedo:global entry 2
 		]]>),
 		log.join('\n')
 	);
@@ -199,16 +199,16 @@ function test_undoRedo_simple()
 
 function test_undoRedo_complex()
 {
-	sv.addEntry({ name   : 'anonymous-1',
-	              label  : 'anonymous 1',
+	sv.addEntry({ name   : 'entry 1',
+	              label  : 'entry  1',
 	              onUndo : function() { log.push('u1'); sv.undo(); },
 	              onRedo : function() { log.push('r1'); } });
-	sv.addEntry({ name   : 'anonymous-2',
-	              label  : 'anonymous 2',
+	sv.addEntry({ name   : 'entry 2',
+	              label  : 'entry  2',
 	              onUndo : function() { log.push('u2'); },
 	              onRedo : function() { log.push('r2'); sv.redo(); } });
-	sv.addEntry({ name   : 'anonymous-3',
-	              label  : 'anonymous 3',
+	sv.addEntry({ name   : 'entry 3',
+	              label  : 'entry  3',
 	              onUndo : function() { log.push('u3'); sv.undo(); },
 	              onRedo : function() { log.push('r3'); sv.redo(); } });
 
@@ -250,8 +250,8 @@ function test_undoRedo_complex()
 	sv.redo(); // r2
 	assertHistoryCount(1, 3);
 
-	sv.addEntry({ name   : 'anonymous-4',
-	              label  : 'anonymous 4',
+	sv.addEntry({ name   : 'entry 4',
+	              label  : 'entry  4',
 	              onUndo : function() { log.push('u4'); sv.addEntry({ label: 'invalid/undo' }); },
 	              onRedo : function() { log.push('r4'); sv.addEntry({ label: 'invalid/redo' }); } });
 	assertHistoryCount(2, 3);
@@ -275,47 +275,47 @@ function test_undoRedo_complex()
 	assert.equals(
 		toSimpleList(<![CDATA[
 			u3
-			UIOperationHistoryUndo:global anonymous-3
+			UIOperationHistoryUndo:global entry 3
 			r3
-			UIOperationHistoryRedo:global anonymous-3
+			UIOperationHistoryRedo:global entry 3
 			u3
-			UIOperationHistoryUndo:global anonymous-3
+			UIOperationHistoryUndo:global entry 3
 			u2
-			UIOperationHistoryUndo:global anonymous-2
+			UIOperationHistoryUndo:global entry 2
 			u1
-			UIOperationHistoryUndo:global anonymous-1
+			UIOperationHistoryUndo:global entry 1
 			r1
-			UIOperationHistoryRedo:global anonymous-1
+			UIOperationHistoryRedo:global entry 1
 			r2
-			UIOperationHistoryRedo:global anonymous-2
+			UIOperationHistoryRedo:global entry 2
 			r3
-			UIOperationHistoryRedo:global anonymous-3
+			UIOperationHistoryRedo:global entry 3
 			u3
-			UIOperationHistoryUndo:global anonymous-3
+			UIOperationHistoryUndo:global entry 3
 			u2
-			UIOperationHistoryUndo:global anonymous-2
+			UIOperationHistoryUndo:global entry 2
 			u1
-			UIOperationHistoryUndo:global anonymous-1
+			UIOperationHistoryUndo:global entry 1
 			r1
-			UIOperationHistoryRedo:global anonymous-1
+			UIOperationHistoryRedo:global entry 1
 			r2
-			UIOperationHistoryRedo:global anonymous-2
+			UIOperationHistoryRedo:global entry 2
 			u4
-			UIOperationHistoryUndo:global anonymous-4
+			UIOperationHistoryUndo:global entry 4
 			r4
-			UIOperationHistoryRedo:global anonymous-4
+			UIOperationHistoryRedo:global entry 4
 			u4
-			UIOperationHistoryUndo:global anonymous-4
+			UIOperationHistoryUndo:global entry 4
 			u2
-			UIOperationHistoryUndo:global anonymous-2
+			UIOperationHistoryUndo:global entry 2
 			u1
-			UIOperationHistoryUndo:global anonymous-1
+			UIOperationHistoryUndo:global entry 1
 			r1
-			UIOperationHistoryRedo:global anonymous-1
+			UIOperationHistoryRedo:global entry 1
 			r2
-			UIOperationHistoryRedo:global anonymous-2
+			UIOperationHistoryRedo:global entry 2
 			r4
-			UIOperationHistoryRedo:global anonymous-4
+			UIOperationHistoryRedo:global entry 4
 		]]>),
 		log.join('\n')
 	);
@@ -460,7 +460,7 @@ function test_doOperation()
 						function() {
 							log.push('op2');
 						},
-						{ name   : 'entry-2',
+						{ name   : 'entry 2',
 						  label  : 'entry 2',
 						  onUndo : function(aInfo) {
 						    log.push('lv'+aInfo.level);
@@ -478,7 +478,7 @@ function test_doOperation()
 							log.push('op3');
 							return false;
 						},
-						{ name   : 'entry-3',
+						{ name   : 'entry 3',
 						  label  : 'entry 3',
 						  onUndo : function(aInfo) {
 						    log.push('lv'+aInfo.level);
@@ -490,7 +490,7 @@ function test_doOperation()
 						  } }
 					);
 				},
-				{ name   : 'entry-1',
+				{ name   : 'entry 1',
 				  label  : 'entry 1',
 				  onUndo : function(aInfo) {
 				    log.push('lv'+aInfo.level);
@@ -504,7 +504,7 @@ function test_doOperation()
 				  } }
 			);
 		},
-		{ name   : 'entry-0',
+		{ name   : 'entry 0',
 		  label  : 'entry 0',
 		  onUndo : function(aInfo) {
 		    log.push('lv'+aInfo.level);
@@ -532,20 +532,20 @@ function test_doOperation()
 			op3
 			lv2
 			u2
-			UIOperationHistoryUndo:global entry-2
+			UIOperationHistoryUndo:global entry 2
 			lv1
-			UIOperationHistoryUndo:global entry-1
+			UIOperationHistoryUndo:global entry 1
 			lv0
 			u0
-			UIOperationHistoryUndo:global entry-0
+			UIOperationHistoryUndo:global entry 0
 			lv0
 			r0
-			UIOperationHistoryRedo:global entry-0
+			UIOperationHistoryRedo:global entry 0
 			lv1
-			UIOperationHistoryRedo:global entry-1
+			UIOperationHistoryRedo:global entry 1
 			lv2
 			r2
-			UIOperationHistoryRedo:global entry-2
+			UIOperationHistoryRedo:global entry 2
 		]]>),
 		log.join('\n')
 	);
@@ -645,31 +645,31 @@ function test_exceptions()
 	assert.raises('EXCEPTION FROM UNDOABLE OPERATION', function() {
 		sv.doOperation(
 			function() {
-				log.push('op0');
+				log.push('op success');
 				sv.doOperation(
 					function() {
-						log.push('op1');
+						log.push('op fail');
 						throw 'EXCEPTION FROM UNDOABLE OPERATION';
 					},
-					{ name   : 'entry-1',
-					  label  : 'entry 1',
+					{ name   : 'cannot redo',
+					  label  : 'cannot redo',
 					  onUndo : function(aInfo) {
-					    log.push('u1');
+					    log.push('u cannot redo');
 					  },
 					  onRedo : function(aInfo) {
 					    throw 'EXCEPTION FROM REDO PROCESS';
-					    log.push('r1');
+					    log.push('r cannot redo');
 					  } }
 				);
 			},
-			{ name   : 'entry-0',
-			  label  : 'entry 0',
+			{ name   : 'cannot undo',
+			  label  : 'cannot undo',
 			  onUndo : function(aInfo) {
 			    throw 'EXCEPTION FROM UNDO PROCESS';
-			    log.push('u0');
+			    log.push('u cannot undo');
 			  },
 			  onRedo : function(aInfo) {
-			    log.push('r0');
+			    log.push('r cannot undo');
 			  } }
 		);
 	});
@@ -683,12 +683,12 @@ function test_exceptions()
 
 	assert.equals(
 		toSimpleList(<![CDATA[
-			op0
-			op1
-			u1
-			UIOperationHistoryUndo:global entry-1
-			r0
-			UIOperationHistoryRedo:global entry-0
+			op success
+			op fail
+			u cannot redo
+			UIOperationHistoryUndo:global cannot redo
+			r cannot undo
+			UIOperationHistoryRedo:global cannot undo
 		]]>),
 		log.join('\n')
 	);
