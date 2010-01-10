@@ -74,7 +74,7 @@
    http://www.cozmixng.org/repos/piro/fx3-compatibility-lib/trunk/operationHistory.test.js
 */
 (function() {
-	const currentRevision = 48;
+	const currentRevision = 49;
 
 	if (!('piro.sakura.ne.jp' in window)) window['piro.sakura.ne.jp'] = {};
 
@@ -307,8 +307,15 @@
 									break;
 								}
 							}
-							if (self._dispatchEvent('UIOperationHistoryUndo:'+options.name, entry, info) !== false)
-								oneProcessed = true;
+							try {
+								if (self._dispatchEvent('UIOperationHistoryUndo:'+options.name, entry, info) !== false)
+									oneProcessed = true;
+							}
+							catch(e) {
+								log(e, 2);
+								error = e;
+								break;
+							}
 							while (!done)
 							{
 								yield true;
@@ -407,8 +414,15 @@
 									break;
 								}
 							}
-							if (self._dispatchEvent('UIOperationHistoryRedo:'+options.name, entry, info) !== false)
-								oneProcessed = true;
+							try {
+								if (self._dispatchEvent('UIOperationHistoryRedo:'+options.name, entry, info) !== false)
+									oneProcessed = true;
+							}
+							catch(e) {
+								log(e, 2);
+								error = e;
+								break;
+							}
 							while (!done)
 							{
 								yield true;
@@ -522,33 +536,53 @@
 			return this._getRedoingState(options.key);
 		},
 
-		syncWindowHistoryFocus : function(aOptions)
+		fakeUndo : function()
 		{
-			if (!aOptions.currentEntry)
-				throw new Error('currentEntry must be specified!');
-			if (!aOptions.entries)
-				throw new Error('entries must be specified!');
-			if (!aOptions.windows)
+			var options = this._getHistoryOptionsFromArguments(arguments);
+			if (!options.name)
+				options.name = 'window';
+			if (!options.entry)
+				throw new Error('target entry must be specified!');
+			if (!options.window || options.window.closed)
 				throw new Error('windows must be specified!');
-			if (aOptions.entries.length != aOptions.windows.length)
-				throw new Error('numbers of entries and windows must be same!');
 
-			var name = aOptions.name || 'window';
+			var history = this.getHistory(options.name, options.window)._original;
+			var message = 'fakeUndo for '+name+' ('+options.entry.label+')';
+			if (history.currentEntries.indexOf(options.entry) > -1) {
+				history.index--;
+				log(message+'\n => done (current)\n'+history.toString(), 5);
+				return;
+			}
+			if (history.getEntriesAt(history.index-1)) {
+				history.index -= 2;
+				log(message+'\n => done\n'+history.toString(), 5);
+				return;
+			}
+			log(message+'\n => canceled (target entry not found)', 4);
+		},
+		fakeRedo : function()
+		{
+			var options = this._getHistoryOptionsFromArguments(arguments);
+			if (!options.name)
+				options.name = 'window';
+			if (!options.entry)
+				throw new Error('target entry must be specified!');
+			if (!options.window || options.window.closed)
+				throw new Error('windows must be specified!');
 
-			log('syncWindowHistoryFocus for '+name+' ('+aOptions.currentEntry.label+')', 4);
-
-			aOptions.entries.forEach(function(aEntry, aIndex) {
-				var history = this.getHistory(name, aOptions.windows[aIndex]);
-				var currentEntries = history.currentEntries;
-				if (currentEntries.indexOf(aOptions.currentEntry) > -1) {
-					return;
-				}
-				log(name+' / '+currentEntries.lengty, 5);
-				if (currentEntries.indexOf(aEntry) > -1) {
-					log(name+' is synced for '+aIndex+' ('+aEntry.label+')', 5);
-					history.index--;
-				}
-			}, this);
+			var history = this.getHistory(options.name, options.window)._original;
+			var message = 'fakeRedo for '+name+' ('+options.entry.label+')';
+			if (history.currentEntries.indexOf(options.entry) > -1) {
+				history.index++;
+				log(message+'\n => done (current)\n'+history.toString(), 5);
+				return;
+			}
+			if (history.getEntriesAt(history.index+1).indexOf(options.entry) > -1) {
+				history.index += 2;
+				log(message+'\n => done\n'+history.toString(), 5);
+				return;
+			}
+			log(message+'\n => canceled (target entry not found)', 4);
 		},
 
 		clear : function()
@@ -1099,6 +1133,16 @@
 			return aValue;
 		},
 
+		get index()
+		{
+			return this._index;
+		},
+		set index(aValue)
+		{
+			this._index = Math.max(-1, Math.min(this.entries.length, aValue));
+			return this._index;
+		},
+
 		get safeIndex()
 		{
 			return Math.max(0, Math.min(this.entries.length-1, this.index));
@@ -1123,7 +1167,7 @@
 			log('UIHistory::clear '+this.key);
 			this.entries  = [];
 			this.metaData = [];
-			this.index    = -1;
+			this._index   = -1;
 			this.inOperationCount = 0;
 		},
 
@@ -1164,7 +1208,7 @@
 		{
 			for (let i = this.safeIndex; i > -1; i--)
 			{
-				let index = this._getEntriesAt(i).indexOf(aEntry);
+				let index = this.getEntriesAt(i).indexOf(aEntry);
 				if (index < 0) continue;
 
 				if (index == 0) {
@@ -1206,7 +1250,7 @@
 			return this.metaData[this.metaData.length-1];
 		},
 
-		_getEntriesAt : function(aIndex)
+		getEntriesAt : function(aIndex)
 		{
 			let entry = this.entries[aIndex];
 			if (!entry) return [];
@@ -1215,11 +1259,11 @@
 		},
 		get currentEntries()
 		{
-			return this._getEntriesAt(this.index);
+			return this.getEntriesAt(this.index);
 		},
 		get lastEntries()
 		{
-			return this._getEntriesAt(this.entries.length-1);
+			return this.getEntriesAt(this.entries.length-1);
 		},
 
 		_getPromotionOptions : function(aArguments)
@@ -1272,50 +1316,25 @@
 	UIHistoryProxy.prototype = {
 		__proto__ : UIHistory.prototype,
 
-		get index()
-		{
-			return this._original.safeIndex;
-		},
-		set index(aValue)
-		{
-			this._original.index = aValue;
-			return aValue;
-		},
+		get key() { return this._original.key; },
+		get name() { return this._original.name; },
+		get window() { return this._original.window; },
+		get windowId() { return this._original.windowId; },
 
-		get entries()
-		{
-			return this._original.entries;
-		},
-		set entries(aValue)
-		{
-			this._original.entries = aValue;
-			return aValue;
-		},
+		get index() { return this._original.safeIndex; },
+		set index(aValue) { return this._original.index = aValue; },
 
-		get metaData()
-		{
-			return this._original.metaData;
-		},
-		set metaData(aValue)
-		{
-			this._original.metaData = aValue;
-			return aValue;
-		},
+		get entries() { return this._original.entries; },
+		set entries(aValue) { return this._original.entries = aValue; },
 
-		get inOperationCount()
-		{
-			return this._original.inOperationCount;
-		},
-		set inOperationCount(aValue)
-		{
-			this._original.inOperationCount = aValue;
-			return aValue;
-		},
+		get metaData() { return this._original.metaData; },
+		set metaData(aValue) { return this._original.metaData = aValue; },
 
-		clear : function()
-		{
-			return this._original.clear();
-		}
+		get inOperationCount() { return this._original.inOperationCount; },
+		set inOperationCount(aValue) { return this._original.inOperationCount = aValue; },
+
+		clear : function() { return this._original.clear(); },
+		toString : function() { return this._original.toString(); }
 	};
 
 	function UIHistoryMetaData()
