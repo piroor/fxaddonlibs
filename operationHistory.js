@@ -1237,7 +1237,7 @@
 		toString : function()
 		{
 			try {
-				var entries = this.entries;
+				var entries = this.entries || [];
 				var metaData = this.metaData;
 				var index = this.index;
 				var string = entries
