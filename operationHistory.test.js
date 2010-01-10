@@ -1,9 +1,9 @@
 utils.include('operationHistory.js', 'Shift_JIS');
 
 var sv;
-var win;
 var log;
 
+var win;
 var windowSetUp = function() {
 	yield Do(utils.setUpTestWindow());
 	win = utils.getTestWindow();
@@ -44,20 +44,27 @@ function tearDown()
 }
 
 
-function test_setWindowId()
+test_setGetWindowId.setUp = windowSetUp;
+test_setGetWindowId.tearDown = windowTearDown;
+function test_setGetWindowId()
 {
-}
+	sv.setWindowId(win, 'foobar');
+	assert.equals('foobar', sv.getWindowId(win));
+	assert.equals('foobar', sv.getWindowId(win, 'default'));
 
-test_getWindowId.setUp = windowSetUp;
-test_getWindowId.tearDown = windowTearDown;
-function test_getWindowId()
-{
-	var id = sv.getWindowId(win);
+	yield Do(windowTearDown());
+	yield Do(windowSetUp());
+
+	var id = sv.getWindowId(win, 'foobar');
 	assert.isNotNull(id);
 	assert.notEquals('', id);
 
-	var newId = sv.getWindowId(win);
+	var newId = sv.getWindowId(win, 'foobar');
+	assert.isNotNull(newId);
 	assert.equals(id, newId);
+
+	sv.setWindowId(win, 'foobar');
+	assert.equals('foobar', sv.getWindowId(win));
 }
 
 test_getWindowById.setUp = windowSetUp;
@@ -72,36 +79,98 @@ function test_getWindowById()
 	assert.isNull(windowFromId);
 }
 
-function test_setElementId()
+test_setGetElementId.setUp = windowSetUp;
+test_setGetElementId.tearDown = windowTearDown;
+function test_setGetElementId()
 {
+	var element = win.gBrowser;
+
+	sv.setElementId(element, 'foobar');
+	assert.equals('foobar', sv.getElementId(element));
+	assert.equals('foobar', sv.getElementId(element, 'default'));
+
+	yield Do(windowTearDown());
+	yield Do(windowSetUp());
+	element = win.gBrowser;
+
+	var id = sv.getElementId(element, 'foobar');
+	assert.isNotNull(id);
+	assert.notEquals('', id);
+
+	var newId = sv.getElementId(element, 'foobar');
+	assert.equals(id, newId);
+
+	sv.setElementId(element, 'foobar');
+	assert.equals('foobar', sv.getElementId(element));
+
+	// duplicated id is not allowed.
+	newId = sv.setElementId(element.parentNode, 'foobar');
+	assert.equals(newId, sv.getElementId(element.parentNode));
+	assert.notEquals('foobar', newId);
+	assert.notEquals('foobar', sv.getElementId(element.parentNode));
 }
 
-function test_getElementId()
-{
-}
-
+test_getElementById.setUp = windowSetUp;
+test_getElementById.tearDown = windowTearDown;
 function test_getElementById()
 {
+	var element = win.gBrowser;
+
+	var id = sv.getElementId(element);
+	var elementFromId = sv.getElementById(id, win);
+	assert.equals(element, elementFromId);
+
+	// returns null for a wrong parent
+	elementFromId = sv.getElementById(id, content);
+	assert.isNull(elementFromId);
+
+	elementFromId = sv.getElementById('does not exist!', win);
+	assert.isNull(elementFromId);
 }
 
-function test_setParentId()
-{
-}
-
-function test_getParentId()
-{
-}
-
+test_getId.setUp = windowSetUp;
+test_getId.tearDown = windowTearDown;
 function test_getId()
 {
+	var id = sv.getId(win);
+	var windowFromId = sv.getWindowById(id);
+	assert.equals(win, windowFromId);
+
+	var element = win.gBrowser;
+
+	id = sv.getId(element);
+	assert.isNotNull(id);
+	var elementFromId = sv.getElementById(id, win);
+	assert.equals(element, elementFromId);
 }
 
+test_getTargetById.setUp = windowSetUp;
+test_getTargetById.tearDown = windowTearDown;
 function test_getTargetById()
 {
+	var element = win.gBrowser;
+	var windowId = sv.getId(win);
+	var elementId = sv.getId(element);
+	assert.equals(win, sv.getTargetById(windowId));
+	assert.equals(element, sv.getTargetById(elementId, win));
 }
 
+test_getTargetsByIds.setUp = windowSetUp;
+test_getTargetsByIds.tearDown = windowTearDown;
 function test_getTargetsByIds()
 {
+	var tabs = [
+			win.gBrowser.addTab(),
+			win.gBrowser.addTab(),
+			win.gBrowser.addTab()
+		];
+	var ids = tabs.map(function(aTab) {
+			return sv.getId(aTab);
+		});
+	assert.equals(tabs, sv.getTargetsByIds(ids[0], ids[1], ids[2], win.gBrowser.mTabContainer));
+	assert.equals(tabs, sv.getTargetsByIds(ids, win.gBrowser.mTabContainer));
+	assert.equals([null, null, null], sv.getTargetsByIds(ids[0], ids[1], ids[2], win));
+	assert.equals([null, null, null], sv.getTargetsByIds(ids, win));
 }
 
 
