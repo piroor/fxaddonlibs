@@ -323,7 +323,7 @@ function test_undoRedo_complex()
 
 function handlEvent_skip(aEvent) {
 	if (aEvent.entry.name == 'skip both')
-		aEvent.preventDefault();
+		aEvent.skip();
 }
 test_undoRedo_skip.setUp = function() {
 	window.addEventListener('UIOperationHistoryUndo:global', handlEvent_skip, false);
@@ -338,10 +338,10 @@ function test_undoRedo_skip()
 	sv.addEntry({ name   : 'skip redo',
 	              label  : 'skip redo',
 	              onUndo : function() { log.push('u redo'); },
-	              onRedo : function() { log.push('r redo'); return false; } });
+	              onRedo : function(aInfo) { log.push('r redo'); aInfo.skip(); } });
 	sv.addEntry({ name   : 'skip undo',
 	              label  : 'skip undo',
-	              onUndo : function() { log.push('u undo'); return false; },
+	              onUndo : function(aInfo) { log.push('u undo'); aInfo.skip(); },
 	              onRedo : function() { log.push('r undo'); } });
 	sv.addEntry({ name   : 'skip both',
 	              label  : 'skip both',
@@ -452,100 +452,166 @@ function test_doOperation()
 {
 	var info = sv.doOperation(
 		function() {
-			log.push('op0');
+			log.push('parent operation');
 			sv.doOperation(
 				function() {
-					log.push('op1');
+					log.push('child operation');
 					sv.doOperation(
 						function() {
-							log.push('op2');
+							log.push('deep operation');
 						},
-						{ name   : 'entry 2',
-						  label  : 'entry 2',
+						{ name   : 'deep',
+						  label  : 'deep',
 						  onUndo : function(aInfo) {
-						    log.push('lv'+aInfo.level);
-						    log.push('u2');
+						    log.push('deep undo');
 						  },
 						  onRedo : function(aInfo) {
-						    log.push('lv'+aInfo.level);
-						    log.push('r2');
+						    // this function should not be called because it is canceled.
+						    log.push('deep redo');
 						  } }
 					);
 					// If the operation returns false,
 					// it should not be registered to the history.
 					sv.doOperation(
 						function() {
-							log.push('op3');
+							log.push('canceled operation');
 							return false;
 						},
-						{ name   : 'entry 3',
-						  label  : 'entry 3',
+						{ name   : 'canceled',
+						  label  : 'canceled',
 						  onUndo : function(aInfo) {
-						    log.push('lv'+aInfo.level);
-						    log.push('u3');
+						    log.push('canceled undo');
 						  },
 						  onRedo : function(aInfo) {
-						    log.push('lv'+aInfo.level);
-						    log.push('r3');
+						    log.push('canceled redo');
 						  } }
 					);
 				},
-				{ name   : 'entry 1',
-				  label  : 'entry 1',
+				{ name   : 'child',
+				  label  : 'child',
 				  onUndo : function(aInfo) {
-				    log.push('lv'+aInfo.level);
+				    log.push('child undo');
 				    return false;
-				    log.push('u1');
 				  },
 				  onRedo : function(aInfo) {
-				    log.push('lv'+aInfo.level);
+				    log.push('child redo');
 				    return false;
-				    log.push('r1');
 				  } }
 			);
 		},
-		{ name   : 'entry 0',
-		  label  : 'entry 0',
+		{ name   : 'parent',
+		  label  : 'parent',
 		  onUndo : function(aInfo) {
-		    log.push('lv'+aInfo.level);
-		    log.push('u0');
+		    // this function should not be called because it is canceled.
+		    log.push('parent undo');
 		  },
 		  onRedo : function(aInfo) {
-		    log.push('lv'+aInfo.level);
-		    log.push('r0');
+		    log.push('parent redo');
 		  } }
 	);
 	assert.isTrue(info.done);
 
 	var history = sv.getHistory();
 	assert.equals(1, history.entries.length, utils.inspect(history.entries));
-	assert.equals('entry 0', history.entries[0].label);
+	assert.equals('parent', history.entries[0].label, utils.inspect(history.entries[0]));
 
 	sv.undo();
 	sv.redo();
 
 	assert.equals(
 		toSimpleList(<![CDATA[
-			op0
-			op1
-			op2
-			op3
-			lv2
-			u2
-			UIOperationHistoryUndo:global entry 2
-			lv1
-			UIOperationHistoryUndo:global entry 1
-			lv0
-			u0
-			UIOperationHistoryUndo:global entry 0
-			lv0
-			r0
-			UIOperationHistoryRedo:global entry 0
-			lv1
-			UIOperationHistoryRedo:global entry 1
-			lv2
-			r2
-			UIOperationHistoryRedo:global entry 2
+			parent operation
+			child operation
+			deep operation
+			canceled operation
+			deep undo
+			UIOperationHistoryUndo:global deep
+			child undo
+			parent redo
+			UIOperationHistoryRedo:global parent
+			child redo
+		]]>),
+		log.join('\n')
+	);
+}
+
+function handlEvent_cancel(aEvent) {
+	if (aEvent.entry.name == 'child')
+		aEvent.preventDefault();
+}
+test_doOperation_canceledByEventListener.setUp = function() {
+	window.addEventListener('UIOperationHistoryUndo:global', handlEvent_cancel, false);
+	window.addEventListener('UIOperationHistoryRedo:global', handlEvent_cancel, false);
+}
+test_doOperation_canceledByEventListener.tearDown = function() {
+	window.removeEventListener('UIOperationHistoryUndo:global', handlEvent_cancel, false);
+	window.removeEventListener('UIOperationHistoryRedo:global', handlEvent_cancel, false);
+}
+function test_doOperation_canceledByEventListener()
+{
+	var info = sv.doOperation(
+		function() {
+			log.push('parent operation');
+			sv.doOperation(
+				function() {
+					log.push('child operation');
+					sv.doOperation(
+						function() {
+							log.push('deep operation');
+						},
+						{ name   : 'deep',
+						  label  : 'deep',
+						  onUndo : function(aInfo) {
+						    log.push('deep undo');
+						  },
+						  onRedo : function(aInfo) {
+						    // this function should not be called because it is canceled.
+						    log.push('deep redo');
+						  } }
+					);
+				},
+				{ name   : 'child',
+				  label  : 'child',
+				  onUndo : function(aInfo) {
+				    log.push('child undo');
+				  },
+				  onRedo : function(aInfo) {
+				    log.push('child redo');
+				  } }
+			);
+		},
+		{ name   : 'parent',
+		  label  : 'parent',
+		  onUndo : function(aInfo) {
+		    // this function should not be called because it is canceled.
+		    log.push('parent undo');
+		  },
+		  onRedo : function(aInfo) {
+		    log.push('parent redo');
+		  } }
+	);
+	assert.isTrue(info.done);
+
+	var history = sv.getHistory();
+	assert.equals(1, history.entries.length, utils.inspect(history.entries));
+	assert.equals('parent', history.entries[0].label, utils.inspect(history.entries[0]));
+
+	sv.undo();
+	sv.redo();
+
+	assert.equals(
+		toSimpleList(<![CDATA[
+			parent operation
+			child operation
+			deep operation
+			deep undo
+			UIOperationHistoryUndo:global deep
+			child undo
+			UIOperationHistoryUndo:global child
+			parent redo
+			UIOperationHistoryRedo:global parent
+			child redo
+			UIOperationHistoryRedo:global child
 		]]>),
 		log.join('\n')
 	);
