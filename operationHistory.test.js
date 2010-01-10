@@ -1,5 +1,8 @@
+utils.include('operationHistory.js', 'Shift_JIS');
+
 var sv;
 var win;
+var log;
 
 var windowSetUp = function() {
 	yield Do(utils.setUpTestWindow());
@@ -10,25 +13,34 @@ var windowTearDown = function() {
 	win = null;
 };
 
+function handleEvent(aEvent) {
+	log.push(aEvent.type+' '+aEvent.entry.name);
+}
+
+function toSimpleList(aString) {
+	return String(aString)
+			.replace(/^\s+|\s+$/g, '')
+			.replace(/\n\t+/g, '\n');
+}
+
 function setUp()
 {
-	var namespace = {
-			window : {
-				utils : utils,
-				addEventListener : function() {},
-				removeEventListener : function() {}
-			}
-		};
-	utils.include('operationHistory.js', namespace, 'Shift_JIS');
-	sv = namespace.window['piro.sakura.ne.jp'].operationHistory;
+	sv = window['piro.sakura.ne.jp'].operationHistory;
 	sv._db = {
 		histories : {},
 		observerRegistered : true
 	};
+
+	log = [];
+
+	window.addEventListener('UIOperationHistoryUndo:global', handleEvent, false);
+	window.addEventListener('UIOperationHistoryRedo:global', handleEvent, false);
 }
 
 function tearDown()
 {
+	window.removeEventListener('UIOperationHistoryUndo:global', handleEvent, false);
+	window.removeEventListener('UIOperationHistoryRedo:global', handleEvent, false);
 }
 
 test_getWindowId.setUp = windowSetUp;
@@ -134,12 +146,11 @@ function assertHistoryCount(aIndex, aCount)
 
 function test_undoRedo_simple()
 {
-	var log = [];
-
 	assert.isFalse(sv.isUndoing());
 	assert.isFalse(sv.isRedoing());
 
-	sv.addEntry({ label  : 'anonymous 1',
+	sv.addEntry({ name   : 'anonymous-1',
+	              label  : 'anonymous 1',
 	              onUndo : function() {
 	                log.push('u1');
 	                assert.isTrue(sv.isUndoing());
@@ -150,7 +161,8 @@ function test_undoRedo_simple()
 	                assert.isFalse(sv.isUndoing());
 	                assert.isTrue(sv.isRedoing());
 	              } });
-	sv.addEntry({ label : 'anonymous 2',
+	sv.addEntry({ name   : 'anonymous-2',
+	              label  : 'anonymous 2',
 	              onUndo : function() {
 	                log.push('u2');
 	                assert.isTrue(sv.isUndoing());
@@ -171,20 +183,29 @@ function test_undoRedo_simple()
 	assert.isFalse(sv.isUndoing());
 	assert.isFalse(sv.isRedoing());
 
-	assert.equals('u2,r2', log.join(','));
+	assert.equals(
+		toSimpleList(<![CDATA[
+			u2
+			UIOperationHistoryUndo:global anonymous-2
+			r2
+			UIOperationHistoryRedo:global anonymous-2
+		]]>),
+		log.join('\n')
+	);
 }
 
 function test_undoRedo_complex()
 {
-	var log = [];
-
-	sv.addEntry({ label  : 'anonymous 1',
+	sv.addEntry({ name   : 'anonymous-1',
+	              label  : 'anonymous 1',
 	              onUndo : function() { log.push('u1'); sv.undo(); },
 	              onRedo : function() { log.push('r1'); } });
-	sv.addEntry({ label : 'anonymous 2',
+	sv.addEntry({ name   : 'anonymous-2',
+	              label  : 'anonymous 2',
 	              onUndo : function() { log.push('u2'); },
 	              onRedo : function() { log.push('r2'); sv.redo(); } });
-	sv.addEntry({ label : 'anonymous 3',
+	sv.addEntry({ name   : 'anonymous-3',
+	              label  : 'anonymous 3',
 	              onUndo : function() { log.push('u3'); sv.undo(); },
 	              onRedo : function() { log.push('r3'); sv.redo(); } });
 
@@ -226,7 +247,8 @@ function test_undoRedo_complex()
 	sv.redo(); // r2
 	assertHistoryCount(1, 3);
 
-	sv.addEntry({ label : 'anonymous 4',
+	sv.addEntry({ name   : 'anonymous-4',
+	              label  : 'anonymous 4',
 	              onUndo : function() { log.push('u4'); sv.addEntry({ label: 'invalid/undo' }); },
 	              onRedo : function() { log.push('r4'); sv.addEntry({ label: 'invalid/redo' }); } });
 	assertHistoryCount(2, 3);
@@ -247,17 +269,63 @@ function test_undoRedo_complex()
 	sv.redo(); // r4
 	assertHistoryCount(2, 3);
 
-	assert.equals('u3,r3,u3,u2,u1,r1,r2,r3,u3,u2,u1,r1,r2,u4,r4,u4,u2,u1,r1,r2,r4', log.join(','));
+	assert.equals(
+		toSimpleList(<![CDATA[
+			u3
+			UIOperationHistoryUndo:global anonymous-3
+			r3
+			UIOperationHistoryRedo:global anonymous-3
+			u3
+			UIOperationHistoryUndo:global anonymous-3
+			u2
+			UIOperationHistoryUndo:global anonymous-2
+			u1
+			UIOperationHistoryUndo:global anonymous-1
+			r1
+			UIOperationHistoryRedo:global anonymous-1
+			r2
+			UIOperationHistoryRedo:global anonymous-2
+			r3
+			UIOperationHistoryRedo:global anonymous-3
+			u3
+			UIOperationHistoryUndo:global anonymous-3
+			u2
+			UIOperationHistoryUndo:global anonymous-2
+			u1
+			UIOperationHistoryUndo:global anonymous-1
+			r1
+			UIOperationHistoryRedo:global anonymous-1
+			r2
+			UIOperationHistoryRedo:global anonymous-2
+			u4
+			UIOperationHistoryUndo:global anonymous-4
+			r4
+			UIOperationHistoryRedo:global anonymous-4
+			u4
+			UIOperationHistoryUndo:global anonymous-4
+			u2
+			UIOperationHistoryUndo:global anonymous-2
+			u1
+			UIOperationHistoryUndo:global anonymous-1
+			r1
+			UIOperationHistoryRedo:global anonymous-1
+			r2
+			UIOperationHistoryRedo:global anonymous-2
+			r4
+			UIOperationHistoryRedo:global anonymous-4
+		]]>),
+		log.join('\n')
+	);
 }
 
 function test_undoRedo_skip()
 {
-	var log = [];
-
-	sv.addEntry({ label  : 'anonymous 1',
+	sv.addEntry({ name   : 'anonymous-1',
+	              label  : 'anonymous 1',
 	              onUndo : function() { log.push('u1'); },
 	              onRedo : function() { log.push('r1'); return false; } });
-	sv.addEntry({ label : 'anonymous 2',
+	sv.addEntry({ name   : 'anonymous-2',
+	              label  : 'anonymous 2',
 	              onUndo : function() { log.push('u2'); return false; },
 	              onRedo : function() { log.push('r2'); } });
 
@@ -267,17 +335,29 @@ function test_undoRedo_skip()
 	sv.redo(); // r1, r2
 	assertHistoryCount(1, 2);
 
-	assert.equals('u2,u1,r1,r2', log.join(','));
+	assert.equals(
+		toSimpleList(<![CDATA[
+			u2
+			UIOperationHistoryUndo:global anonymous-2
+			u1
+			UIOperationHistoryUndo:global anonymous-1
+			r1
+			UIOperationHistoryRedo:global anonymous-1
+			r2
+			UIOperationHistoryRedo:global anonymous-2
+		]]>),
+		log.join('\n')
+	);
 }
 
 function test_undoRedo_continuation()
 {
-	var log = [];
-
-	sv.addEntry({ label  : 'anonymous 1',
+	sv.addEntry({ name   : 'anonymous-1',
+	              label  : 'anonymous 1',
 	              onUndo : function() { log.push('u1'); },
 	              onRedo : function() { log.push('r1'); } });
 	sv.addEntry({
+	              name   : 'anonymous-2',
 	              label  : 'anonymous 2',
 	              onUndo : function(aInfo) {
 	                log.push('u2');
@@ -322,50 +402,81 @@ function test_undoRedo_continuation()
 	assert.isFalse(sv.isUndoing());
 	assert.isFalse(sv.isRedoing());
 
-	assert.equals('u2,r2', log.join(','));
+	assert.equals(
+		toSimpleList(<![CDATA[
+			u2
+			UIOperationHistoryUndo:global anonymous-2
+			r2
+			UIOperationHistoryRedo:global anonymous-2
+		]]>),
+		log.join('\n')
+	);
 }
 
 function test_doOperation()
 {
-	var log = [];
 	var info = sv.doOperation(
 		function() {
+			log.push('op0');
 			sv.doOperation(
 				function() {
+					log.push('op1');
 					sv.doOperation(
 						function() {
+							log.push('op2');
 						},
-						{ label  : 'entry 2',
+						{ name   : 'entry-2',
+						  label  : 'entry 2',
 						  onUndo : function(aInfo) {
-						    log.push(aInfo.level);
+						    log.push('lv'+aInfo.level);
 						    log.push('u2');
 						  },
 						  onRedo : function(aInfo) {
-						    log.push(aInfo.level);
+						    log.push('lv'+aInfo.level);
 						    log.push('r2');
 						  } }
 					);
+					// If the operation returns false,
+					// it should not be registered to the history.
+					sv.doOperation(
+						function() {
+							log.push('op3');
+							return false;
+						},
+						{ name   : 'entry-3',
+						  label  : 'entry 3',
+						  onUndo : function(aInfo) {
+						    log.push('lv'+aInfo.level);
+						    log.push('u3');
+						  },
+						  onRedo : function(aInfo) {
+						    log.push('lv'+aInfo.level);
+						    log.push('r3');
+						  } }
+					);
 				},
-				{ label  : 'entry 1',
+				{ name   : 'entry-1',
+				  label  : 'entry 1',
 				  onUndo : function(aInfo) {
-				    log.push(aInfo.level);
+				    log.push('lv'+aInfo.level);
 				    return false;
 				    log.push('u1');
 				  },
 				  onRedo : function(aInfo) {
-				    log.push(aInfo.level);
+				    log.push('lv'+aInfo.level);
 				    return false;
 				    log.push('r1');
 				  } }
 			);
 		},
-		{ label  : 'entry 0',
+		{ name   : 'entry-0',
+		  label  : 'entry 0',
 		  onUndo : function(aInfo) {
-		    log.push(aInfo.level);
+		    log.push('lv'+aInfo.level);
 		    log.push('u0');
 		  },
 		  onRedo : function(aInfo) {
-		    log.push(aInfo.level);
+		    log.push('lv'+aInfo.level);
 		    log.push('r0');
 		  } }
 	);
@@ -377,43 +488,59 @@ function test_doOperation()
 
 	sv.undo();
 	sv.redo();
-	assert.equals('2,u2,1,0,u0,0,r0,1,2,r2', log.join(','));
-}
 
-function test_doOperation_autoRegisterRedo()
-{
-	var task = function() { var foo = 'bar'; };
-	sv.doOperation(
-		task,
-		{ label  : 'entry 1',
-		  onUndo : function() { return true; } }
+	assert.equals(
+		toSimpleList(<![CDATA[
+			op0
+			op1
+			op2
+			op3
+			lv2
+			u2
+			UIOperationHistoryUndo:global entry-2
+			lv1
+			UIOperationHistoryUndo:global entry-1
+			lv0
+			u0
+			UIOperationHistoryUndo:global entry-0
+			lv0
+			r0
+			UIOperationHistoryRedo:global entry-0
+			lv1
+			UIOperationHistoryRedo:global entry-1
+			lv2
+			r2
+			UIOperationHistoryRedo:global entry-2
+		]]>),
+		log.join('\n')
 	);
-
-	var history = sv.getHistory();
-	assert.equals(task, history.entries[0].onRedo);
 }
 
 function test_doOperation_continuation()
 {
-	var log = [];
 	var info;
 
 	var history = sv.getHistory();
 	info = sv.doOperation(
 		function(aInfo) {
+			log.push('op00');
 			var continuation = aInfo.getContinuation();
 			var info = sv.doOperation(
 				function(aInfo) {
+					log.push('op01');
 					var info = sv.doOperation(
 						function(aInfo) {
+							log.push('op02');
 						},
-						{ label  : 'entry 02',
+						{ name   : 'entry-02',
+						  label  : 'entry 02',
 						  onUndo : function(aInfo) { log.push('u02'); },
 						  onRedo : function(aInfo) { log.push('r02'); } }
 					);
 					assert.isTrue(info.done);
 				},
-				{ label  : 'entry 01',
+				{ name   : 'entry-01',
+				  label  : 'entry 01',
 				  onUndo : function(aInfo) { log.push('u01'); },
 				  onRedo : function(aInfo) { log.push('r01'); } }
 			);
@@ -422,7 +549,8 @@ function test_doOperation_continuation()
 			}, 300);
 			assert.isTrue(info.done);
 		},
-		{ label  : 'entry 00',
+		{ name   : 'entry-00',
+		  label  : 'entry 00',
 		  onUndo : function(aInfo) { log.push('u00'); },
 		  onRedo : function(aInfo) { log.push('r00'); } }
 	);
@@ -432,13 +560,17 @@ function test_doOperation_continuation()
 
 	info = sv.doOperation(
 		function(aInfo) {
+			log.push('op10');
 			var info = sv.doOperation(
 				function(aInfo) {
+					log.push('op11');
 					var continuation = aInfo.getContinuation();
 					var info = sv.doOperation(
 						function(aInfo) {
+							log.push('op12');
 						},
-						{ label  : 'entry 12',
+						{ name   : 'entry-12',
+						  label  : 'entry 12',
 						  onUndo : function(aInfo) { log.push('u12'); },
 						  onRedo : function(aInfo) { log.push('r12'); } }
 					);
@@ -447,13 +579,15 @@ function test_doOperation_continuation()
 					  continuation();
 					}, 300);
 				},
-				{ label  : 'entry 11',
+				{ name   : 'entry-11',
+				  label  : 'entry 11',
 				  onUndo : function(aInfo) { log.push('u11'); },
 				  onRedo : function(aInfo) { log.push('r11'); } }
 			);
 			assert.isFalse(info.done);
 		},
-		{ label  : 'entry 10',
+		{ name   : 'entry-10',
+		  label  : 'entry 10',
 		  onUndo : function(aInfo) { log.push('u10'); },
 		  onRedo : function(aInfo) { log.push('r10'); } }
 	);
@@ -463,34 +597,57 @@ function test_doOperation_continuation()
 	sv.undo();
 	sv.redo();
 	sv.redo();
-	assert.equals('u12,u11,u10,u02,u01,u00,r00,r01,r02,r10,r11,r12', log.join(','));
+
+	assert.equals(
+		toSimpleList(<![CDATA[
+			op00
+			op01
+			op02
+			op10
+			op11
+			op12
+			u12
+			UIOperationHistoryUndo:global entry-12
+			u11
+			UIOperationHistoryUndo:global entry-11
+			u10
+			UIOperationHistoryUndo:global entry-10
+			u02
+			UIOperationHistoryUndo:global entry-02
+			u01
+			UIOperationHistoryUndo:global entry-01
+			u00
+			UIOperationHistoryUndo:global entry-00
+			r00
+			UIOperationHistoryRedo:global entry-00
+			r01
+			UIOperationHistoryRedo:global entry-01
+			r02
+			UIOperationHistoryRedo:global entry-02
+			r10
+			UIOperationHistoryRedo:global entry-10
+			r11
+			UIOperationHistoryRedo:global entry-11
+			r12
+			UIOperationHistoryRedo:global entry-12
+		]]>),
+		log.join('\n')
+	);
 }
 
 function test_exceptions()
 {
-	var log = [];
-	assert.raises('EXCEPTION FROM UNDOABLE TASK', function() {
+	assert.raises('EXCEPTION FROM UNDOABLE OPERATION', function() {
 		sv.doOperation(
 			function() {
-				log.push('t0');
+				log.push('op0');
 				sv.doOperation(
 					function() {
-						log.push('t1');
-						throw 'EXCEPTION FROM UNDOABLE TASK';
-						sv.doOperation(
-							function() {
-								log.push('t2');
-							},
-							{ label  : 'entry 2',
-							  onUndo : function(aInfo) {
-							    log.push('u2');
-							  },
-							  onRedo : function(aInfo) {
-							    log.push('r2');
-							  } }
-						);
+						log.push('op1');
+						throw 'EXCEPTION FROM UNDOABLE OPERATION';
 					},
-					{ label  : 'entry 1',
+					{ name   : 'entry-1',
+					  label  : 'entry 1',
 					  onUndo : function(aInfo) {
 					    log.push('u1');
 					  },
@@ -500,7 +657,8 @@ function test_exceptions()
 					  } }
 				);
 			},
-			{ label  : 'entry 0',
+			{ name   : 'entry-0',
+			  label  : 'entry 0',
 			  onUndo : function(aInfo) {
 			    throw 'EXCEPTION FROM UNDO PROCESS';
 			    log.push('u0');
@@ -517,7 +675,18 @@ function test_exceptions()
 	assert.raises('EXCEPTION FROM REDO PROCESS', function() {
 		sv.redo();
 	});
-	assert.equals('t0,t1,u1,r0', log.join(','));
+
+	assert.equals(
+		toSimpleList(<![CDATA[
+			op0
+			op1
+			u1
+			UIOperationHistoryUndo:global entry-1
+			r0
+			UIOperationHistoryRedo:global entry-0
+		]]>),
+		log.join('\n')
+	);
 }
 
 
