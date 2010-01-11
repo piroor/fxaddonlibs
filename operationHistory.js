@@ -296,7 +296,7 @@
 							log('level '+(max-i)+' '+entry.label, 2);
 							let done = true;
 							let f = self._getAvailableFunction(entry.onUndo, entry.onundo, entry.undo);
-							let info = {
+							let params = {
 									level   : max-i,
 									manager : self,
 									window  : window,
@@ -315,7 +315,7 @@
 								};
 							if (f) {
 								try {
-									if (f.call(entry, info) === false) {
+									if (f.call(entry, params) === false) {
 										shouldStop = true;
 										break;
 									}
@@ -328,7 +328,7 @@
 								}
 							}
 							try {
-								if (!self._dispatchEvent('UIOperationHistoryUndo:'+options.name, entry, info)) {
+								if (!self._dispatchEvent('UIOperationHistoryUndo:'+options.name, entry, params)) {
 									shouldStop = true;
 									break;
 								}
@@ -415,7 +415,7 @@
 							let entry = entries[i];
 							log('level '+(i)+' '+entry.label, 2);
 							let done = true;
-							let info = {
+							let params = {
 									level   : i,
 									manager : self,
 									window  : window,
@@ -435,7 +435,7 @@
 							let f = self._getAvailableFunction(entry.onRedo, entry.onredo, entry.redo);
 							if (f) {
 								try {
-									if (f.call(entry, info) === false) {
+									if (f.call(entry, params) === false) {
 										shouldStop = true;
 										break;
 									}
@@ -448,7 +448,7 @@
 								}
 							}
 							try {
-								if (!self._dispatchEvent('UIOperationHistoryRedo:'+options.name, entry, info)) {
+								if (!self._dispatchEvent('UIOperationHistoryRedo:'+options.name, entry, params)) {
 									shouldStop = true;
 									break;
 								}
@@ -517,19 +517,19 @@
 			var iterator = (function() {
 					while (true)
 					{
-						let info;
+						let result;
 						if (index < current) {
 							if (history.index <= index)
 								break;
-							info = self.undo(options.name, options.window);
+							result = self.undo(options.name, options.window);
 						}
 						else {
 							if (history.index >= index)
 								break;
-							info = self.redo(options.name, options.window);
+							result = self.redo(options.name, options.window);
 						}
 
-						while (!info.done)
+						while (!result.done)
 						{
 							yield true;
 						}
@@ -897,20 +897,20 @@
 			window.removeEventListener('unload', this, false);
 		},
 
-		_dispatchEvent : function(aType, aEntry, aInfo)
+		_dispatchEvent : function(aType, aEntry, aParams)
 		{
-			var d = aInfo.window ? aInfo.window.document : document ;
+			var d = aParams.window ? aParams.window.document : document ;
 			var event = d.createEvent('Events');
 			event.initEvent(aType, true, true);
 
 			event.entry = aEntry;
-			event.params = aInfo;
-			event.paramaterss = aInfo;
+			event.params = aParams;
+			event.paramaterss = aParams;
 			event.manager = this;
 
-			event.wait     = aInfo.wait;
-			event.continue = aInfo.continue;
-			event.skip     = aInfo.skip;
+			event.wait     = aParams.wait;
+			event.continue = aParams.continue;
+			event.skip     = aParams.skip;
 
 			var result = d.dispatchEvent(event);
 			log('event dispacthed: '+aType+' ('+result+')', 3);
