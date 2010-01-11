@@ -105,8 +105,10 @@
 
 	const PREF_PREFIX = 'extensions.UIOperationsHistoryManager@piro.sakura.ne.jp.';
 
-	const Application = Cc['@mozilla.org/fuel/application;1']
-					.getService(Ci.fuelIApplication);
+	const Application = 'fuelIApplication' in Ci ?
+				Cc['@mozilla.org/fuel/application;1']
+					.getService(Ci.fuelIApplication) :
+				null ;
 	const Prefs = Cc['@mozilla.org/preferences;1']
 					.getService(Ci.nsIPrefBranch);
 	const WindowMediator = Cc['@mozilla.org/appshell/window-mediator;1']
@@ -123,7 +125,7 @@
 
 	const oneIndent = '   ';
 	function log(aString, aLevel) {
-		if (!DEBUG) return;
+		if (!DEBUG || !Application) return;
 		aString = String(aString);
 		if (aLevel) {
 			let indent = '';
