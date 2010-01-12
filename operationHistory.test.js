@@ -253,34 +253,47 @@ function assertHistoryCount(aIndex, aCount)
 	);
 }
 
+function assertUndoingState(aExpectedUndoing, aExpectedRedoing, aMessage)
+{
+	if (aExpectedUndoing)
+		assert.isTrue(sv.isUndoing(), aMessage);
+	else
+		assert.isFalse(sv.isUndoing(), aMessage);
+
+	if (aExpectedRedoing)
+		assert.isTrue(sv.isRedoing(), aMessage);
+	else
+		assert.isFalse(sv.isRedoing(), aMessage);
+
+	if (aExpectedUndoing || aExpectedRedoing)
+		assert.isFalse(sv.isUndoable(), aMessage);
+	else
+		assert.isTrue(sv.isUndoable(), aMessage);
+}
+
 function test_undoRedo_simple()
 {
-	assert.isFalse(sv.isUndoing());
-	assert.isFalse(sv.isRedoing());
+	assertUndoingState(false, false);
 
 	sv.addEntry({ name   : 'entry 1',
 	              label  : 'entry 1',
 	              onUndo : function() {
 	                log.push('u1');
-	                assert.isTrue(sv.isUndoing());
-	                assert.isFalse(sv.isRedoing());
+	                assertUndoingState(true, false);
 	              },
 	              onRedo : function() {
 	                log.push('r1');
-	                assert.isFalse(sv.isUndoing());
-	                assert.isTrue(sv.isRedoing());
+	                assertUndoingState(false, true);
 	              } });
 	sv.addEntry({ name   : 'entry 2',
 	              label  : 'entry 2',
 	              onUndo : function() {
 	                log.push('u2');
-	                assert.isTrue(sv.isUndoing());
-	                assert.isFalse(sv.isRedoing());
+	                assertUndoingState(true, false);
 	              },
 	              onRedo : function() {
 	                log.push('r2');
-	                assert.isFalse(sv.isUndoing());
-	                assert.isTrue(sv.isRedoing());
+	                assertUndoingState(false, true);
 	              } });
 	sv.addEntry({ name   : 'entry 3',
 	              label  : 'entry 3' });
@@ -288,13 +301,11 @@ function test_undoRedo_simple()
 	assertHistoryCount(2, 3);
 	assert.isTrue(sv.undo().done); // entry 3
 	assert.isTrue(sv.undo().done); // u2
-	assert.isFalse(sv.isUndoing());
-	assert.isFalse(sv.isRedoing());
+	assertUndoingState(false, false);
 	assertHistoryCount(0, 3);
 	assert.isTrue(sv.redo().done); // r2
 	assert.isTrue(sv.redo().done); // entry 3
-	assert.isFalse(sv.isUndoing());
-	assert.isFalse(sv.isRedoing());
+	assertUndoingState(false, false);
 
 	assert.equals(
 		toSimpleList(<![CDATA[
@@ -549,28 +560,23 @@ function test_undoRedo_wait()
 
 	var info;
 
-	assert.isFalse(sv.isUndoing());
-	assert.isFalse(sv.isRedoing());
+	assertUndoingState(false, false);
 
 	info = sv.undo(); // u delayed
 	assertHistoryCount(0, 2);
 	assert.isFalse(info.done);
-	assert.isTrue(sv.isUndoing(), uneval(info));
-	assert.isFalse(sv.isRedoing());
+	assertUndoingState(true, false);
 	yield 600;
 	assert.isTrue(info.done);
-	assert.isFalse(sv.isUndoing());
-	assert.isFalse(sv.isRedoing());
+	assertUndoingState(false, false);
 
 	info = sv.redo(); // r delayed
 	assertHistoryCount(1, 2);
 	assert.isFalse(info.done);
-	assert.isFalse(sv.isUndoing());
-	assert.isTrue(sv.isRedoing());
+	assertUndoingState(false, true);
 	yield 600;
 	assert.isTrue(info.done);
-	assert.isFalse(sv.isUndoing());
-	assert.isFalse(sv.isRedoing());
+	assertUndoingState(false, false);
 
 	assert.equals(
 		toSimpleList(<![CDATA[
