@@ -77,7 +77,7 @@
    http://www.cozmixng.org/repos/piro/fx3-compatibility-lib/trunk/operationHistory.test.js
 */
 (function() {
-	const currentRevision = 53;
+	const currentRevision = 54;
 
 	if (!('piro.sakura.ne.jp' in window)) window['piro.sakura.ne.jp'] = {};
 
@@ -288,16 +288,23 @@
 						shouldStop = true;
 
 						log((history.index+1)+' '+entries[0].label, 1);
+
 						let max = entries.length-1;
-						entries = Array.slice(entries).reverse();
-						for (let i in entries)
+						let processes = entries.concat(Array.slice(entries).reverse());
+						let preProcess = true;
+						for (let i in processes)
 						{
-							let entry = entries[i];
-							log('level '+(max-i)+' '+entry.label, 2);
+							if (i > max)
+								preProcess = false;
+							let entry = processes[i];
+							let level = preProcess ? i : i-max ;
+							log('level '+level+' '+entry.label, 2);
 							let done = true;
-							let f = self._getAvailableFunction(entry.onUndo, entry.onundo, entry.undo);
+							let f = preProcess ?
+										self._getAvailableFunction(entry.onPreUndo, entry.onPreundo, entry.onpreundo) :
+										self._getAvailableFunction(entry.onUndo, entry.onundo) ;
 							let params = {
-									level   : max-i,
+									level   : level,
 									manager : self,
 									window  : window,
 									wait    : function() {
@@ -328,7 +335,14 @@
 								}
 							}
 							try {
-								if (!self._dispatchEvent('UIOperationHistoryUndo:'+options.name, entry, params)) {
+								if (!self._dispatchEvent(
+										(preProcess ?
+											'UIOperationHistoryPreUndo:' :
+											'UIOperationHistoryUndo:'
+										)+options.name,
+										entry,
+										params
+									)) {
 									shouldStop = true;
 									break;
 								}
@@ -410,13 +424,20 @@
 						shouldStop = true;
 
 						log((history.index)+' '+entries[0].label, 1);
-						for (let i in entries)
+
+						let max = entries.length-1;
+						let processes = entries.concat(Array.slice(entries).reverse());
+						let postProcess = false;
+						for (let i in processes)
 						{
-							let entry = entries[i];
-							log('level '+(i)+' '+entry.label, 2);
+							if (i > max)
+								postProcess = true;
+							let entry = processes[i];
+							let level = postProcess ? i : i-max ;
+							log('level '+level+' '+entry.label, 2);
 							let done = true;
 							let params = {
-									level   : i,
+									level   : level,
 									manager : self,
 									window  : window,
 									wait    : function() {
@@ -432,7 +453,9 @@
 										shouldStop = false;
 									}
 								};
-							let f = self._getAvailableFunction(entry.onRedo, entry.onredo, entry.redo);
+							let f = postProcess ?
+										self._getAvailableFunction(entry.onPostRedo, entry.onPostredo, entry.onpostredo) :
+										self._getAvailableFunction(entry.onRedo, entry.onredo) ;
 							if (f) {
 								try {
 									if (f.call(entry, params) === false) {
@@ -448,7 +471,14 @@
 								}
 							}
 							try {
-								if (!self._dispatchEvent('UIOperationHistoryRedo:'+options.name, entry, params)) {
+								if (!self._dispatchEvent(
+										(postProcess ?
+											'UIOperationHistoryPostRedo:' :
+											'UIOperationHistoryRedo:'
+										)+options.name,
+										entry,
+										params
+									)) {
 									shouldStop = true;
 									break;
 								}
