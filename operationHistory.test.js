@@ -14,7 +14,23 @@ var windowTearDown = function() {
 };
 
 function handleEvent(aEvent) {
-	log.push(aEvent.type+' '+aEvent.entry.name);
+	var prefix;
+	switch (aEvent.type)
+	{
+		case 'UIOperationHistoryPreUndo:global':
+			prefix = 'event(pre-undo)';
+			break;
+		case 'UIOperationHistoryUndo:global':
+			prefix = 'event(undo)';
+			break;
+		case 'UIOperationHistoryRedo:global':
+			prefix = 'event(redo)';
+			break;
+		case 'UIOperationHistoryPostRedo:global':
+			prefix = 'event(post-redo)';
+			break;
+	}
+	log.push(prefix+' '+aEvent.entry.name+' (level '+aEvent.params.level+')');
 }
 
 function toSimpleList(aString) {
@@ -281,29 +297,29 @@ function test_undoRedo_simple()
 
 	sv.addEntry({ name   : 'entry 1',
 	              label  : 'entry 1',
-	              onUndo : function() {
+	              onUndo : function(aParams) {
 	                log.push('u1');
 	                assertUndoingState(true, false);
 	              },
-	              onRedo : function() {
+	              onRedo : function(aParams) {
 	                log.push('r1');
 	                assertUndoingState(false, true);
 	              } });
 	sv.addEntry({ name   : 'entry 2',
 	              label  : 'entry 2',
-	              onPreUndo : function() {
+	              onPreUndo : function(aParams) {
 	                log.push('u2pre');
 	                assertUndoingState(true, false);
 	              },
-	              onUndo : function() {
+	              onUndo : function(aParams) {
 	                log.push('u2');
 	                assertUndoingState(true, false);
 	              },
-	              onRedo : function() {
+	              onRedo : function(aParams) {
 	                log.push('r2');
 	                assertUndoingState(false, true);
 	              },
-	              onPostRedo : function() {
+	              onPostRedo : function(aParams) {
 	                log.push('r2post');
 	                assertUndoingState(false, true);
 	              } });
@@ -321,18 +337,18 @@ function test_undoRedo_simple()
 
 	assert.equals(
 		toSimpleList(<![CDATA[
-			UIOperationHistoryPreUndo:global entry 3
-			UIOperationHistoryUndo:global entry 3
+			event(pre-undo) entry 3 (level 0)
+			event(undo) entry 3 (level 0)
 			u2pre
-			UIOperationHistoryPreUndo:global entry 2
+			event(pre-undo) entry 2 (level 0)
 			u2
-			UIOperationHistoryUndo:global entry 2
+			event(undo) entry 2 (level 0)
 			r2
-			UIOperationHistoryRedo:global entry 2
+			event(redo) entry 2 (level 0)
 			r2post
-			UIOperationHistoryPostRedo:global entry 2
-			UIOperationHistoryRedo:global entry 3
-			UIOperationHistoryPostRedo:global entry 3
+			event(post-redo) entry 2 (level 0)
+			event(redo) entry 3 (level 0)
+			event(post-redo) entry 3 (level 0)
 		]]>),
 		log.join('\n')
 	);
@@ -342,22 +358,22 @@ function test_undoRedo_goToIndex()
 {
 	sv.addEntry({ name   : 'entry 1',
 	              label  : 'entry 1',
-	              onPreUndo : function() { log.push('u1pre'); },
-	              onUndo : function() { log.push('u1'); sv.undo(); /* <= this should be ignored */ },
-	              onRedo : function() { log.push('r1'); },
-	              onPostRedo : function() { log.push('r1post'); } });
+	              onPreUndo : function(aParams) { log.push('u1pre'); },
+	              onUndo : function(aParams) { log.push('u1'); sv.undo(); /* <= this should be ignored */ },
+	              onRedo : function(aParams) { log.push('r1'); },
+	              onPostRedo : function(aParams) { log.push('r1post'); } });
 	sv.addEntry({ name   : 'entry 2',
 	              label  : 'entry 2',
-	              onPreUndo : function() { log.push('u2pre'); },
-	              onUndo : function() { log.push('u2'); },
-	              onRedo : function() { log.push('r2'); sv.redo(); /* <= this should be ignored */ },
-	              onPostRedo : function() { log.push('r2post'); sv.redo(); } });
+	              onPreUndo : function(aParams) { log.push('u2pre'); },
+	              onUndo : function(aParams) { log.push('u2'); },
+	              onRedo : function(aParams) { log.push('r2'); sv.redo(); /* <= this should be ignored */ },
+	              onPostRedo : function(aParams) { log.push('r2post'); sv.redo(); } });
 	sv.addEntry({ name   : 'entry 3',
 	              label  : 'entry 3',
-	              onPreUndo : function() { log.push('u3pre'); sv.undo(); /* <= this should be ignored */ },
-	              onUndo : function() { log.push('u3'); sv.undo(); /* <= this should be ignored */ },
-	              onRedo : function() { log.push('r3'); sv.redo(); /* <= this should be ignored */ },
-	              onPostRedo : function() { log.push('r3post'); sv.redo(); /* <= this should be ignored */ } });
+	              onPreUndo : function(aParams) { log.push('u3pre'); sv.undo(); /* <= this should be ignored */ },
+	              onUndo : function(aParams) { log.push('u3'); sv.undo(); /* <= this should be ignored */ },
+	              onRedo : function(aParams) { log.push('r3'); sv.redo(); /* <= this should be ignored */ },
+	              onPostRedo : function(aParams) { log.push('r3post'); sv.redo(); /* <= this should be ignored */ } });
 
 	assertHistoryCount(2, 3);
 	sv.undo(); // u3pre, u3
@@ -400,10 +416,10 @@ function test_undoRedo_goToIndex()
 	log.push('----insert');
 	sv.addEntry({ name   : 'entry 4',
 	              label  : 'entry 4',
-	              onPreUndo : function() { log.push('u4pre'); sv.addEntry({ label: 'invalid/undo' }); },
-	              onUndo : function() { log.push('u4'); sv.addEntry({ label: 'invalid/undo' }); },
-	              onRedo : function() { log.push('r4'); sv.addEntry({ label: 'invalid/redo' }); },
-	              onPostRedo : function() { log.push('r4post'); sv.addEntry({ label: 'invalid/redo' }); } });
+	              onPreUndo : function(aParams) { log.push('u4pre'); sv.addEntry({ label: 'invalid/undo' }); },
+	              onUndo : function(aParams) { log.push('u4'); sv.addEntry({ label: 'invalid/undo' }); },
+	              onRedo : function(aParams) { log.push('r4'); sv.addEntry({ label: 'invalid/redo' }); },
+	              onPostRedo : function(aParams) { log.push('r4post'); sv.addEntry({ label: 'invalid/redo' }); } });
 	assertHistoryCount(2, 3);
 	sv.undo(); // u4pre, u4
 	assertHistoryCount(1, 3);
@@ -430,108 +446,108 @@ function test_undoRedo_goToIndex()
 	assert.equals(
 		toSimpleList(<![CDATA[
 			u3pre
-			UIOperationHistoryPreUndo:global entry 3
+			event(pre-undo) entry 3 (level 0)
 			u3
-			UIOperationHistoryUndo:global entry 3
+			event(undo) entry 3 (level 0)
 			r3
-			UIOperationHistoryRedo:global entry 3
+			event(redo) entry 3 (level 0)
 			r3post
-			UIOperationHistoryPostRedo:global entry 3
+			event(post-redo) entry 3 (level 0)
 			u3pre
-			UIOperationHistoryPreUndo:global entry 3
+			event(pre-undo) entry 3 (level 0)
 			u3
-			UIOperationHistoryUndo:global entry 3
+			event(undo) entry 3 (level 0)
 			u2pre
-			UIOperationHistoryPreUndo:global entry 2
+			event(pre-undo) entry 2 (level 0)
 			u2
-			UIOperationHistoryUndo:global entry 2
+			event(undo) entry 2 (level 0)
 			u1pre
-			UIOperationHistoryPreUndo:global entry 1
+			event(pre-undo) entry 1 (level 0)
 			u1
-			UIOperationHistoryUndo:global entry 1
+			event(undo) entry 1 (level 0)
 			r1
-			UIOperationHistoryRedo:global entry 1
+			event(redo) entry 1 (level 0)
 			r1post
-			UIOperationHistoryPostRedo:global entry 1
+			event(post-redo) entry 1 (level 0)
 			r2
-			UIOperationHistoryRedo:global entry 2
+			event(redo) entry 2 (level 0)
 			r2post
-			UIOperationHistoryPostRedo:global entry 2
+			event(post-redo) entry 2 (level 0)
 			r3
-			UIOperationHistoryRedo:global entry 3
+			event(redo) entry 3 (level 0)
 			r3post
-			UIOperationHistoryPostRedo:global entry 3
+			event(post-redo) entry 3 (level 0)
 			u3pre
-			UIOperationHistoryPreUndo:global entry 3
+			event(pre-undo) entry 3 (level 0)
 			u3
-			UIOperationHistoryUndo:global entry 3
+			event(undo) entry 3 (level 0)
 			u2pre
-			UIOperationHistoryPreUndo:global entry 2
+			event(pre-undo) entry 2 (level 0)
 			u2
-			UIOperationHistoryUndo:global entry 2
+			event(undo) entry 2 (level 0)
 			u1pre
-			UIOperationHistoryPreUndo:global entry 1
+			event(pre-undo) entry 1 (level 0)
 			u1
-			UIOperationHistoryUndo:global entry 1
+			event(undo) entry 1 (level 0)
 			r1
-			UIOperationHistoryRedo:global entry 1
+			event(redo) entry 1 (level 0)
 			r1post
-			UIOperationHistoryPostRedo:global entry 1
+			event(post-redo) entry 1 (level 0)
 			r2
-			UIOperationHistoryRedo:global entry 2
+			event(redo) entry 2 (level 0)
 			r2post
-			UIOperationHistoryPostRedo:global entry 2
+			event(post-redo) entry 2 (level 0)
 			----insert
 			u4pre
-			UIOperationHistoryPreUndo:global entry 4
+			event(pre-undo) entry 4 (level 0)
 			u4
-			UIOperationHistoryUndo:global entry 4
+			event(undo) entry 4 (level 0)
 			r4
-			UIOperationHistoryRedo:global entry 4
+			event(redo) entry 4 (level 0)
 			r4post
-			UIOperationHistoryPostRedo:global entry 4
+			event(post-redo) entry 4 (level 0)
 			u4pre
-			UIOperationHistoryPreUndo:global entry 4
+			event(pre-undo) entry 4 (level 0)
 			u4
-			UIOperationHistoryUndo:global entry 4
+			event(undo) entry 4 (level 0)
 			u2pre
-			UIOperationHistoryPreUndo:global entry 2
+			event(pre-undo) entry 2 (level 0)
 			u2
-			UIOperationHistoryUndo:global entry 2
+			event(undo) entry 2 (level 0)
 			u1pre
-			UIOperationHistoryPreUndo:global entry 1
+			event(pre-undo) entry 1 (level 0)
 			u1
-			UIOperationHistoryUndo:global entry 1
+			event(undo) entry 1 (level 0)
 			r1
-			UIOperationHistoryRedo:global entry 1
+			event(redo) entry 1 (level 0)
 			r1post
-			UIOperationHistoryPostRedo:global entry 1
+			event(post-redo) entry 1 (level 0)
 			r2
-			UIOperationHistoryRedo:global entry 2
+			event(redo) entry 2 (level 0)
 			r2post
-			UIOperationHistoryPostRedo:global entry 2
+			event(post-redo) entry 2 (level 0)
 			r4
-			UIOperationHistoryRedo:global entry 4
+			event(redo) entry 4 (level 0)
 			r4post
-			UIOperationHistoryPostRedo:global entry 4
+			event(post-redo) entry 4 (level 0)
 			----goToIndex back
 			u4pre
-			UIOperationHistoryPreUndo:global entry 4
+			event(pre-undo) entry 4 (level 0)
 			u4
-			UIOperationHistoryUndo:global entry 4
+			event(undo) entry 4 (level 0)
 			u2pre
-			UIOperationHistoryPreUndo:global entry 2
+			event(pre-undo) entry 2 (level 0)
 			u2
-			UIOperationHistoryUndo:global entry 2
+			event(undo) entry 2 (level 0)
 			----goToIndex forward
 			r2
-			UIOperationHistoryRedo:global entry 2
+			event(redo) entry 2 (level 0)
 			r2post
-			UIOperationHistoryPostRedo:global entry 2
+			event(post-redo) entry 2 (level 0)
 			r4
-			UIOperationHistoryRedo:global entry 4
+			event(redo) entry 4 (level 0)
 			r4post
-			UIOperationHistoryPostRedo:global entry 4
+			event(post-redo) entry 4 (level 0)
 		]]>),
 		log.join('\n')
 	);
@@ -553,20 +569,20 @@ function test_undoRedo_skip()
 {
 	sv.addEntry({ name   : 'skip redo',
 	              label  : 'skip redo',
-	              onUndo : function() { log.push('u redo'); },
-	              onRedo : function(aInfo) { log.push('r redo'); aInfo.skip(); } });
+	              onUndo : function(aParams) { log.push('u redo'); },
+	              onRedo : function(aParams) { log.push('r redo'); aParams.skip(); } });
 	sv.addEntry({ name   : 'skip undo',
 	              label  : 'skip undo',
-	              onUndo : function(aInfo) { log.push('u undo'); aInfo.skip(); },
-	              onRedo : function() { log.push('r undo'); } });
+	              onUndo : function(aParams) { log.push('u undo'); aParams.skip(); },
+	              onRedo : function(aParams) { log.push('r undo'); } });
 	sv.addEntry({ name   : 'skip both',
 	              label  : 'skip both',
-	              onUndo : function() { log.push('u both'); },
-	              onRedo : function() { log.push('r both'); } });
+	              onUndo : function(aParams) { log.push('u both'); },
+	              onRedo : function(aParams) { log.push('r both'); } });
 	sv.addEntry({ name   : 'normal',
 	              label  : 'normal',
-	              onUndo : function() { log.push('u normal'); },
-	              onRedo : function() { log.push('r normal'); } });
+	              onUndo : function(aParams) { log.push('u normal'); },
+	              onRedo : function(aParams) { log.push('r normal'); } });
 
 	assertHistoryCount(3, 4);
 	sv.undo(); // u normal
@@ -583,33 +599,33 @@ function test_undoRedo_skip()
 
 	assert.equals(
 		toSimpleList(<![CDATA[
-			UIOperationHistoryPreUndo:global normal
+			event(pre-undo) normal (level 0)
 			u normal
-			UIOperationHistoryUndo:global normal
+			event(undo) normal (level 0)
 			----
-			UIOperationHistoryPreUndo:global skip both
+			event(pre-undo) skip both (level 0)
 			u both
-			UIOperationHistoryUndo:global skip both
-			UIOperationHistoryPreUndo:global skip undo
+			event(undo) skip both (level 0)
+			event(pre-undo) skip undo (level 0)
 			u undo
-			UIOperationHistoryUndo:global skip undo
-			UIOperationHistoryPreUndo:global skip redo
+			event(undo) skip undo (level 0)
+			event(pre-undo) skip redo (level 0)
 			u redo
-			UIOperationHistoryUndo:global skip redo
+			event(undo) skip redo (level 0)
 			----
 			r redo
-			UIOperationHistoryRedo:global skip redo
-			UIOperationHistoryPostRedo:global skip redo
+			event(redo) skip redo (level 0)
+			event(post-redo) skip redo (level 0)
 			r undo
-			UIOperationHistoryRedo:global skip undo
-			UIOperationHistoryPostRedo:global skip undo
+			event(redo) skip undo (level 0)
+			event(post-redo) skip undo (level 0)
 			----
 			r both
-			UIOperationHistoryRedo:global skip both
-			UIOperationHistoryPostRedo:global skip both
+			event(redo) skip both (level 0)
+			event(post-redo) skip both (level 0)
 			r normal
-			UIOperationHistoryRedo:global normal
-			UIOperationHistoryPostRedo:global normal
+			event(redo) normal (level 0)
+			event(post-redo) normal (level 0)
 		]]>),
 		log.join('\n')
 	);
@@ -622,16 +638,16 @@ function test_undoRedo_wait()
 	sv.addEntry({
 	              name   : 'delayed',
 	              label  : 'delayed',
-	              onPreUndo : function(aInfo) {
-	                aInfo.wait();
+	              onPreUndo : function(aParams) {
+	                aParams.wait();
 	                window.setTimeout(function() {
-	                  aInfo.continue();
+	                  aParams.continue();
 	                }, 300);
 	              },
-	              onRedo : function(aInfo) {
-	                aInfo.wait();
+	              onRedo : function(aParams) {
+	                aParams.wait();
 	                window.setTimeout(function() {
-	                  aInfo.continue();
+	                  aParams.continue();
 	                }, 300);
 	              }
 	            });
@@ -663,13 +679,13 @@ function test_undoRedo_wait()
 
 	assert.equals(
 		toSimpleList(<![CDATA[
-			UIOperationHistoryPreUndo:global delayed
+			event(pre-undo) delayed (level 0)
 			--waiting
-			UIOperationHistoryUndo:global delayed
+			event(undo) delayed (level 0)
 			----
-			UIOperationHistoryRedo:global delayed
+			event(redo) delayed (level 0)
 			--waiting
-			UIOperationHistoryPostRedo:global delayed
+			event(post-redo) delayed (level 0)
 		]]>),
 		log.join('\n')
 	);
@@ -678,14 +694,14 @@ function test_undoRedo_wait()
 function test_doOperation()
 {
 	var info = sv.doOperation(
-		function() {
-			log.push('parent operation');
+		function(aParams) {
+			log.push('parent operation (level '+aParams.level+')');
 			sv.doOperation(
-				function() {
-					log.push('child operation');
+				function(aParams) {
+					log.push('child operation (level '+aParams.level+')');
 					sv.doOperation(
-						function() {
-							log.push('deep operation');
+						function(aParams) {
+							log.push('deep operation (level '+aParams.level+')');
 						},
 						{ name   : 'deep',
 						  label  : 'deep' }
@@ -693,8 +709,8 @@ function test_doOperation()
 					// If the operation returns false,
 					// it should not be registered to the history.
 					sv.doOperation(
-						function() {
-							log.push('canceled operation');
+						function(aParams) {
+							log.push('canceled operation (level '+aParams.level+')');
 							return false;
 						},
 						{ name   : 'canceled',
@@ -703,11 +719,11 @@ function test_doOperation()
 				},
 				{ name   : 'child',
 				  label  : 'child',
-				  onUndo : function(aInfo) {
+				  onUndo : function(aParams) {
 				    log.push('--canceled');
 				    return false;
 				  },
-				  onPostRedo : function(aInfo) {
+				  onPostRedo : function(aParams) {
 				    log.push('--canceled');
 				    return false;
 				  } }
@@ -729,21 +745,21 @@ function test_doOperation()
 
 	assert.equals(
 		toSimpleList(<![CDATA[
-			parent operation
-			child operation
-			deep operation
-			canceled operation
+			parent operation (level 0)
+			child operation (level 1)
+			deep operation (level 2)
+			canceled operation (level 2)
 			----
-			UIOperationHistoryPreUndo:global parent
-			UIOperationHistoryPreUndo:global child
-			UIOperationHistoryPreUndo:global deep
-			UIOperationHistoryUndo:global deep
+			event(pre-undo) parent (level 0)
+			event(pre-undo) child (level 1)
+			event(pre-undo) deep (level 2)
+			event(undo) deep (level 2)
 			--canceled
 			----
-			UIOperationHistoryRedo:global parent
-			UIOperationHistoryRedo:global child
-			UIOperationHistoryRedo:global deep
-			UIOperationHistoryPostRedo:global deep
+			event(redo) parent (level 0)
+			event(redo) child (level 1)
+			event(redo) deep (level 2)
+			event(post-redo) deep (level 2)
 			--canceled
 		]]>),
 		log.join('\n')
@@ -767,14 +783,14 @@ test_doOperation_canceledByEventListener.tearDown = function() {
 function test_doOperation_canceledByEventListener()
 {
 	var info = sv.doOperation(
-		function() {
-			log.push('parent operation');
+		function(aParams) {
+			log.push('parent operation (level '+aParams.level+')');
 			sv.doOperation(
-				function() {
-					log.push('child operation');
+				function(aParams) {
+					log.push('child operation (level '+aParams.level+')');
 					sv.doOperation(
-						function() {
-							log.push('deep operation');
+						function(aParams) {
+							log.push('deep operation (level '+aParams.level+')');
 						},
 						{ name   : 'deep',
 						  label  : 'deep' }
@@ -800,22 +816,22 @@ function test_doOperation_canceledByEventListener()
 
 	assert.equals(
 		toSimpleList(<![CDATA[
-			parent operation
-			child operation
-			deep operation
+			parent operation (level 0)
+			child operation (level 1)
+			deep operation (level 2)
 			----
-			UIOperationHistoryPreUndo:global parent
-			UIOperationHistoryPreUndo:global child
-			UIOperationHistoryPreUndo:global deep
-			UIOperationHistoryUndo:global deep
-			UIOperationHistoryUndo:global child
+			event(pre-undo) parent (level 0)
+			event(pre-undo) child (level 1)
+			event(pre-undo) deep (level 2)
+			event(undo) deep (level 2)
+			event(undo) child (level 1)
 			--canceled
 			----
-			UIOperationHistoryRedo:global parent
-			UIOperationHistoryRedo:global child
-			UIOperationHistoryRedo:global deep
-			UIOperationHistoryPostRedo:global deep
-			UIOperationHistoryPostRedo:global child
+			event(redo) parent (level 0)
+			event(redo) child (level 1)
+			event(redo) deep (level 2)
+			event(post-redo) deep (level 2)
+			event(post-redo) child (level 1)
 			--canceled
 		]]>),
 		log.join('\n')
@@ -827,18 +843,18 @@ function test_doOperation_wait()
 	var info;
 
 	info = sv.doOperation(
-		function(aInfo) {
-			log.push('op delayed parent');
-			aInfo.wait();
+		function(aParams) {
+			log.push('op delayed parent (level '+aParams.level+')');
+			aParams.wait();
 			var info = sv.doOperation(
-				function(aInfo) {
-					log.push('op normal child');
+				function(aParams) {
+					log.push('op normal child (level '+aParams.level+')');
 				},
 				{ name   : 'normal child',
 				  label  : 'normal child' }
 			);
 			window.setTimeout(function() {
-			  aInfo.continue();
+			  aParams.continue();
 			}, 300);
 			assert.isTrue(info.done);
 		},
@@ -850,14 +866,14 @@ function test_doOperation_wait()
 	assert.isTrue(info.done);
 
 	info = sv.doOperation(
-		function(aInfo) {
-			log.push('op normal parent');
+		function(aParams) {
+			log.push('op normal parent (level '+aParams.level+')');
 			var info = sv.doOperation(
-				function(aInfo) {
-					log.push('op delayed child');
-					aInfo.wait();
+				function(aParams) {
+					log.push('op delayed child (level '+aParams.level+')');
+					aParams.wait();
 					window.setTimeout(function() {
-					  aInfo.continue();
+					  aParams.continue();
 					}, 300);
 				},
 				{ name   : 'delayed child',
@@ -881,30 +897,30 @@ function test_doOperation_wait()
 
 	assert.equals(
 		toSimpleList(<![CDATA[
-			op delayed parent
-			op normal child
-			op normal parent
-			op delayed child
+			op delayed parent (level 0)
+			op normal child (level 1)
+			op normal parent (level 0)
+			op delayed child (level 1)
 			----
-			UIOperationHistoryPreUndo:global normal parent
-			UIOperationHistoryPreUndo:global delayed child
-			UIOperationHistoryUndo:global delayed child
-			UIOperationHistoryUndo:global normal parent
+			event(pre-undo) normal parent (level 0)
+			event(pre-undo) delayed child (level 1)
+			event(undo) delayed child (level 1)
+			event(undo) normal parent (level 0)
 			----
-			UIOperationHistoryPreUndo:global delayed parent
-			UIOperationHistoryPreUndo:global normal child
-			UIOperationHistoryUndo:global normal child
-			UIOperationHistoryUndo:global delayed parent
+			event(pre-undo) delayed parent (level 0)
+			event(pre-undo) normal child (level 1)
+			event(undo) normal child (level 1)
+			event(undo) delayed parent (level 0)
 			----
-			UIOperationHistoryRedo:global delayed parent
-			UIOperationHistoryRedo:global normal child
-			UIOperationHistoryPostRedo:global normal child
-			UIOperationHistoryPostRedo:global delayed parent
+			event(redo) delayed parent (level 0)
+			event(redo) normal child (level 1)
+			event(post-redo) normal child (level 1)
+			event(post-redo) delayed parent (level 0)
 			----
-			UIOperationHistoryRedo:global normal parent
-			UIOperationHistoryRedo:global delayed child
-			UIOperationHistoryPostRedo:global delayed child
-			UIOperationHistoryPostRedo:global normal parent
+			event(redo) normal parent (level 0)
+			event(redo) delayed child (level 1)
+			event(post-redo) delayed child (level 1)
+			event(post-redo) normal parent (level 0)
 		]]>),
 		log.join('\n')
 	);
@@ -918,9 +934,9 @@ function test_fakeUndoRedo()
 	var child = [];
 
 	sv.doOperation(
-		function(aInfo) {
+		function(aParams) {
 			sv.doOperation(
-				function(aInfo) {
+				function(aParams) {
 				},
 				win,
 				(child[0] = {
@@ -936,9 +952,9 @@ function test_fakeUndoRedo()
 		})
 	);
 	sv.doOperation(
-		function(aInfo) {
+		function(aParams) {
 			sv.doOperation(
-				function(aInfo) {
+				function(aParams) {
 				},
 				win,
 				(child[1] = {
@@ -954,9 +970,9 @@ function test_fakeUndoRedo()
 		})
 	);
 	sv.doOperation(
-		function(aInfo) {
+		function(aParams) {
 			sv.doOperation(
-				function(aInfo) {
+				function(aParams) {
 				},
 				win,
 				(child[2] = {
@@ -1042,19 +1058,19 @@ function test_exceptions()
 {
 	assert.raises('EXCEPTION FROM UNDOABLE OPERATION', function() {
 		sv.doOperation(
-			function() {
-				log.push('op success');
+			function(aParams) {
+				log.push('op success (level '+aParams.level+')');
 				sv.doOperation(
-					function() {
-						log.push('op fail');
+					function(aParams) {
+						log.push('op fail (level '+aParams.level+')');
 						throw 'EXCEPTION FROM UNDOABLE OPERATION';
 					},
 					{ name   : 'cannot redo',
 					  label  : 'cannot redo',
-					  onUndo : function(aInfo) {
+					  onUndo : function(aParams) {
 					    log.push('u cannot redo');
 					  },
-					  onRedo : function(aInfo) {
+					  onRedo : function(aParams) {
 					    throw 'EXCEPTION FROM REDO PROCESS';
 					    log.push('r cannot redo');
 					  } }
@@ -1062,15 +1078,17 @@ function test_exceptions()
 			},
 			{ name   : 'cannot undo',
 			  label  : 'cannot undo',
-			  onUndo : function(aInfo) {
+			  onUndo : function(aParams) {
 			    throw 'EXCEPTION FROM UNDO PROCESS';
 			    log.push('u cannot undo');
 			  },
-			  onRedo : function(aInfo) {
+			  onRedo : function(aParams) {
 			    log.push('r cannot undo');
 			  } }
 		);
 	});
+
+	log.push('----');
 
 	assert.raises('EXCEPTION FROM UNDO PROCESS', function() {
 		sv.undo();
@@ -1081,14 +1099,15 @@ function test_exceptions()
 
 	assert.equals(
 		toSimpleList(<![CDATA[
-			op success
-			op fail
-			UIOperationHistoryPreUndo:global cannot undo
-			UIOperationHistoryPreUndo:global cannot redo
+			op success (level 0)
+			op fail (level 1)
+			----
+			event(pre-undo) cannot undo (level 0)
+			event(pre-undo) cannot redo (level 1)
 			u cannot redo
-			UIOperationHistoryUndo:global cannot redo
+			event(undo) cannot redo (level 1)
 			r cannot undo
-			UIOperationHistoryRedo:global cannot undo
+			event(redo) cannot undo (level 0)
 		]]>),
 		log.join('\n')
 	);

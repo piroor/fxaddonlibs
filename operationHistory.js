@@ -77,7 +77,7 @@
    http://www.cozmixng.org/repos/piro/fx3-compatibility-lib/trunk/operationHistory.test.js
 */
 (function() {
-	const currentRevision = 54;
+	const currentRevision = 55;
 
 	if (!('piro.sakura.ne.jp' in window)) window['piro.sakura.ne.jp'] = {};
 
@@ -297,8 +297,8 @@
 							if (i > max)
 								preProcess = false;
 							let entry = processes[i];
-							let level = preProcess ? i : i-max ;
-							log('level '+level+' '+entry.label, 2);
+							let level = preProcess ? i : (max*2)-i+1 ;
+							log('level '+level+' '+(preProcess ? 'pre-' : '' )+'undo '+entry.label, 2);
 							let done = true;
 							let f = preProcess ?
 										self._getAvailableFunction(entry.onPreUndo, entry.onPreundo, entry.onpreundo) :
@@ -323,6 +323,7 @@
 							if (f) {
 								try {
 									if (f.call(entry, params) === false) {
+										log(' => canceled by function', 2);
 										shouldStop = true;
 										break;
 									}
@@ -330,6 +331,7 @@
 								catch(e) {
 									log(e, 2);
 									error = e;
+									log(' => canceled by error from function', 2);
 									shouldStop = true;
 									break;
 								}
@@ -343,6 +345,7 @@
 										entry,
 										params
 									)) {
+									log(' => canceled by preventEvent()', 2);
 									shouldStop = true;
 									break;
 								}
@@ -350,6 +353,7 @@
 							catch(e) {
 								log(e, 2);
 								error = e;
+								log(' => canceled by error from event listener', 2);
 								shouldStop = true;
 								break;
 							}
@@ -433,8 +437,8 @@
 							if (i > max)
 								postProcess = true;
 							let entry = processes[i];
-							let level = postProcess ? i : i-max ;
-							log('level '+level+' '+entry.label, 2);
+							let level = postProcess ? (max*2)-i+1 : i ;
+							log('level '+level+' '+(postProcess ? 'post-' : '' )+'redo '+entry.label, 2);
 							let done = true;
 							let params = {
 									level   : level,
@@ -459,6 +463,7 @@
 							if (f) {
 								try {
 									if (f.call(entry, params) === false) {
+										log(' => canceled by function', 2);
 										shouldStop = true;
 										break;
 									}
@@ -466,6 +471,7 @@
 								catch(e) {
 									log(e, 2);
 									error = e;
+									log(' => canceled by error from function', 2);
 									shouldStop = true;
 									break;
 								}
@@ -479,6 +485,7 @@
 										entry,
 										params
 									)) {
+									log(' => canceled by preventEvent()', 2);
 									shouldStop = true;
 									break;
 								}
@@ -486,6 +493,7 @@
 							catch(e) {
 								log(e, 2);
 								error = e;
+								log(' => canceled by error from event listener', 2);
 								shouldStop = true;
 								break;
 							}
