@@ -77,7 +77,7 @@
    http://www.cozmixng.org/repos/piro/fx3-compatibility-lib/trunk/operationHistory.test.js
 */
 (function() {
-	const currentRevision = 56;
+	const currentRevision = 57;
 
 	if (!('piro.sakura.ne.jp' in window)) window['piro.sakura.ne.jp'] = {};
 
@@ -206,6 +206,7 @@
 						catch(e) {
 							log(e, history.inOperationCount);
 							error = e;
+							throw error;
 						}
 						while (!done.done)
 						{
@@ -239,6 +240,7 @@
 								return false;
 							}
 							catch(e) {
+								log(e);
 								return false;
 							}
 							finally {
@@ -335,8 +337,7 @@
 									log(e, 2);
 									error = e;
 									log(' => canceled by error from function', 2);
-									shouldStop = true;
-									break;
+									throw error;
 								}
 							}
 							try {
@@ -357,8 +358,7 @@
 								log(e, 2);
 								error = e;
 								log(' => canceled by error from event listener', 2);
-								shouldStop = true;
-								break;
+								throw error;
 							}
 							while (!done)
 							{
@@ -387,6 +387,7 @@
 							return false;
 						}
 						catch(e) {
+							log(e);
 							return false;
 						}
 						finally {
@@ -478,8 +479,7 @@
 									log(e, 2);
 									error = e;
 									log(' => canceled by error from function', 2);
-									shouldStop = true;
-									break;
+									throw error;
 								}
 							}
 							try {
@@ -500,8 +500,7 @@
 								log(e, 2);
 								error = e;
 								log(' => canceled by error from event listener', 2);
-								shouldStop = true;
-								break;
+								throw error;
 							}
 							while (!done)
 							{
@@ -529,6 +528,7 @@
 							return false;
 						}
 						catch(e) {
+							log(e);
 							return false;
 						}
 						finally {
@@ -1515,6 +1515,7 @@
 			}
 			catch(e) {
 				this.cancel();
+				throw e;
 			}
 		}
 	};
