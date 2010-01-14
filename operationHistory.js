@@ -77,7 +77,7 @@
    http://www.cozmixng.org/repos/piro/fx3-compatibility-lib/trunk/operationHistory.test.js
 */
 (function() {
-	const currentRevision = 57;
+	const currentRevision = 58;
 
 	if (!('piro.sakura.ne.jp' in window)) window['piro.sakura.ne.jp'] = {};
 
@@ -299,6 +299,7 @@
 						let preProcess = true;
 						for (let i in processes)
 						{
+							processed = true;
 							if (i > max)
 								preProcess = false;
 							let entry = processes[i];
@@ -342,10 +343,8 @@
 							}
 							try {
 								if (!self._dispatchEvent(
-										(preProcess ?
-											'UIOperationHistoryPreUndo:' :
-											'UIOperationHistoryUndo:'
-										)+options.name,
+										(preProcess ? 'PreUndo' : 'Undo' )+':'+options.name,
+										history,
 										entry,
 										params
 									)) {
@@ -371,6 +370,8 @@
 
 			var onFinish = function() {
 					self._setUndoingState(options.key, false);
+					if (processed)
+						self._dispatchCompleteEvent('Undo', history, window);
 					log('  => undo done\n'+history.toString());
 				};
 
@@ -441,6 +442,7 @@
 						let postProcess = false;
 						for (let i in processes)
 						{
+							processed = true;
 							if (i > max)
 								postProcess = true;
 							let entry = processes[i];
@@ -484,10 +486,8 @@
 							}
 							try {
 								if (!self._dispatchEvent(
-										(postProcess ?
-											'UIOperationHistoryPostRedo:' :
-											'UIOperationHistoryRedo:'
-										)+options.name,
+										(postProcess ? 'PostRedo' : 'Redo' )+':'+options.name,
+										history,
 										entry,
 										params
 									)) {
@@ -512,6 +512,8 @@
 
 			var onFinish = function() {
 					self._setRedoingState(options.key, false);
+					if (processed)
+						self._dispatchCompleteEvent('Redo', history, window);
 					log('  => redo done\n'+history.toString());
 				};
 
@@ -659,11 +661,13 @@
 			var message = 'fakeUndo for '+name+' ('+options.entry.label+')';
 			if (history.currentEntries.indexOf(options.entry) > -1) {
 				history.index--;
+				this._dispatchCompleteEvent('Undo', history, options.window);
 				log(message+'\n => done (current)\n'+history.toString(), 5);
 				return;
 			}
 			if (history.getEntriesAt(history.index-1).indexOf(options.entry) > -1) {
 				history.index -= 2;
+				this._dispatchCompleteEvent('Undo', history, options.window);
 				log(message+'\n => done\n'+history.toString(), 5);
 				return;
 			}
@@ -683,11 +687,13 @@
 			var message = 'fakeRedo for '+name+' ('+options.entry.label+')';
 			if (history.currentEntries.indexOf(options.entry) > -1) {
 				history.index++;
+				this._dispatchCompleteEvent('Redo', history, options.window);
 				log(message+'\n => done (current)\n'+history.toString(), 5);
 				return;
 			}
 			if (history.getEntriesAt(history.index+1).indexOf(options.entry) > -1) {
 				history.index += 2;
+				this._dispatchCompleteEvent('Redo', history, options.window);
 				log(message+'\n => done\n'+history.toString(), 5);
 				return;
 			}
@@ -973,14 +979,17 @@
 			window.removeEventListener('unload', this, false);
 		},
 
-		_dispatchEvent : function(aType, aEntry, aParams)
+		EVENT_TYPE_PREFIX : 'UIOperationHistory',
+
+		_dispatchEvent : function(aType, aHistory, aEntry, aParams)
 		{
 			var d = aParams.window ? aParams.window.document : document ;
 			var event = d.createEvent('Events');
-			event.initEvent(aType, true, true);
+			event.initEvent(this.EVENT_TYPE_PREFIX+aType, true, true);
 
-			event.entry = aEntry;
-			event.params = aParams;
+			event.history = aHistory;
+			event.entry   = aEntry;
+			event.params  = aParams;
 			event.paramaterss = aParams;
 			event.manager = this;
 
@@ -989,7 +998,19 @@
 			event.skip     = aParams.skip;
 
 			var result = d.dispatchEvent(event);
-			log('event dispacthed: '+aType+' ('+result+')', 3);
+			log('event dispacthed: '+event.type+' ('+result+')', 3);
+			return result;
+		},
+
+		_dispatchCompleteEvent : function(aType, aHistory, aWindow)
+		{
+			var d = aWindow ? aWindow.document : document ;
+			var event = d.createEvent('Events');
+			event.initEvent(this.EVENT_TYPE_PREFIX+aType+'Complete:'+aHistory.name, true, false);
+			event.history = aHistory;
+			event.manager = this;
+			var result = d.dispatchEvent(event);
+			log('event dispacthed: '+event.type+' ('+result+')', 3);
 			return result;
 		},
 

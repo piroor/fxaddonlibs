@@ -4,31 +4,56 @@ var sv;
 var log;
 
 var win;
-var windowSetUp = function() {
+function windowSetUp() {
 	yield Do(utils.setUpTestWindow());
 	win = utils.getTestWindow();
+	eventListenersSetUp(win, 'window');
 };
-var windowTearDown = function() {
+function windowTearDown() {
+	eventListenersTearDown(win, 'window');
 	yield Do(utils.tearDownTestWindow());
 	win = null;
-};
+}
+
+function eventListenersSetUp(aWindow, aName) {
+	aWindow.addEventListener('UIOperationHistoryPreUndo:'+aName, handleEvent, false);
+	aWindow.addEventListener('UIOperationHistoryUndo:'+aName, handleEvent, false);
+	aWindow.addEventListener('UIOperationHistoryRedo:'+aName, handleEvent, false);
+	aWindow.addEventListener('UIOperationHistoryPostRedo:'+aName, handleEvent, false);
+	aWindow.addEventListener('UIOperationHistoryUndoComplete:'+aName, handleEvent, false);
+	aWindow.addEventListener('UIOperationHistoryRedoComplete:'+aName, handleEvent, false);
+}
+function eventListenersTearDown(aWindow, aName) {
+	aWindow.removeEventListener('UIOperationHistoryPreUndo:'+aName, handleEvent, false);
+	aWindow.removeEventListener('UIOperationHistoryUndo:'+aName, handleEvent, false);
+	aWindow.removeEventListener('UIOperationHistoryRedo:'+aName, handleEvent, false);
+	aWindow.removeEventListener('UIOperationHistoryPostRedo:'+aName, handleEvent, false);
+	aWindow.removeEventListener('UIOperationHistoryUndoComplete:'+aName, handleEvent, false);
+	aWindow.removeEventListener('UIOperationHistoryRedoComplete:'+aName, handleEvent, false);
+}
 
 function handleEvent(aEvent) {
 	var prefix;
-	switch (aEvent.type)
+	switch (aEvent.type.split(':')[0])
 	{
-		case 'UIOperationHistoryPreUndo:global':
+		case 'UIOperationHistoryPreUndo':
 			prefix = 'event(pre-undo)';
 			break;
-		case 'UIOperationHistoryUndo:global':
+		case 'UIOperationHistoryUndo':
 			prefix = 'event(undo)';
 			break;
-		case 'UIOperationHistoryRedo:global':
+		case 'UIOperationHistoryRedo':
 			prefix = 'event(redo)';
 			break;
-		case 'UIOperationHistoryPostRedo:global':
+		case 'UIOperationHistoryPostRedo':
 			prefix = 'event(post-redo)';
 			break;
+		case 'UIOperationHistoryUndoComplete':
+			log.push('event(undo-complete)');
+			return;
+		case 'UIOperationHistoryRedoComplete':
+			log.push('event(redo-complete)');
+			return;
 	}
 	log.push(prefix+' '+aEvent.entry.name+' (level '+aEvent.params.level+')');
 }
@@ -48,19 +73,12 @@ function setUp()
 	};
 
 	log = [];
-
-	window.addEventListener('UIOperationHistoryPreUndo:global', handleEvent, false);
-	window.addEventListener('UIOperationHistoryUndo:global', handleEvent, false);
-	window.addEventListener('UIOperationHistoryRedo:global', handleEvent, false);
-	window.addEventListener('UIOperationHistoryPostRedo:global', handleEvent, false);
+	eventListenersSetUp(window, 'global');
 }
 
 function tearDown()
 {
-	window.removeEventListener('UIOperationHistoryPreUndo:global', handleEvent, false);
-	window.removeEventListener('UIOperationHistoryUndo:global', handleEvent, false);
-	window.removeEventListener('UIOperationHistoryRedo:global', handleEvent, false);
-	window.removeEventListener('UIOperationHistoryPostRedo:global', handleEvent, false);
+	eventListenersTearDown(window, 'global');
 }
 
 
@@ -339,16 +357,20 @@ function test_undoRedo_simple()
 		toSimpleList(<![CDATA[
 			event(pre-undo) entry 3 (level 0)
 			event(undo) entry 3 (level 0)
+			event(undo-complete)
 			u2pre
 			event(pre-undo) entry 2 (level 0)
 			u2
 			event(undo) entry 2 (level 0)
+			event(undo-complete)
 			r2
 			event(redo) entry 2 (level 0)
 			r2post
 			event(post-redo) entry 2 (level 0)
+			event(redo-complete)
 			event(redo) entry 3 (level 0)
 			event(post-redo) entry 3 (level 0)
+			event(redo-complete)
 		]]>),
 		log.join('\n')
 	);
@@ -449,105 +471,130 @@ function test_undoRedo_goToIndex()
 			event(pre-undo) entry 3 (level 0)
 			u3
 			event(undo) entry 3 (level 0)
+			event(undo-complete)
 			r3
 			event(redo) entry 3 (level 0)
 			r3post
 			event(post-redo) entry 3 (level 0)
+			event(redo-complete)
 			u3pre
 			event(pre-undo) entry 3 (level 0)
 			u3
 			event(undo) entry 3 (level 0)
+			event(undo-complete)
 			u2pre
 			event(pre-undo) entry 2 (level 0)
 			u2
 			event(undo) entry 2 (level 0)
+			event(undo-complete)
 			u1pre
 			event(pre-undo) entry 1 (level 0)
 			u1
 			event(undo) entry 1 (level 0)
+			event(undo-complete)
 			r1
 			event(redo) entry 1 (level 0)
 			r1post
 			event(post-redo) entry 1 (level 0)
+			event(redo-complete)
 			r2
 			event(redo) entry 2 (level 0)
 			r2post
 			event(post-redo) entry 2 (level 0)
+			event(redo-complete)
 			r3
 			event(redo) entry 3 (level 0)
 			r3post
 			event(post-redo) entry 3 (level 0)
+			event(redo-complete)
 			u3pre
 			event(pre-undo) entry 3 (level 0)
 			u3
 			event(undo) entry 3 (level 0)
+			event(undo-complete)
 			u2pre
 			event(pre-undo) entry 2 (level 0)
 			u2
 			event(undo) entry 2 (level 0)
+			event(undo-complete)
 			u1pre
 			event(pre-undo) entry 1 (level 0)
 			u1
 			event(undo) entry 1 (level 0)
+			event(undo-complete)
 			r1
 			event(redo) entry 1 (level 0)
 			r1post
 			event(post-redo) entry 1 (level 0)
+			event(redo-complete)
 			r2
 			event(redo) entry 2 (level 0)
 			r2post
 			event(post-redo) entry 2 (level 0)
+			event(redo-complete)
 			----insert
 			u4pre
 			event(pre-undo) entry 4 (level 0)
 			u4
 			event(undo) entry 4 (level 0)
+			event(undo-complete)
 			r4
 			event(redo) entry 4 (level 0)
 			r4post
 			event(post-redo) entry 4 (level 0)
+			event(redo-complete)
 			u4pre
 			event(pre-undo) entry 4 (level 0)
 			u4
 			event(undo) entry 4 (level 0)
+			event(undo-complete)
 			u2pre
 			event(pre-undo) entry 2 (level 0)
 			u2
 			event(undo) entry 2 (level 0)
+			event(undo-complete)
 			u1pre
 			event(pre-undo) entry 1 (level 0)
 			u1
 			event(undo) entry 1 (level 0)
+			event(undo-complete)
 			r1
 			event(redo) entry 1 (level 0)
 			r1post
 			event(post-redo) entry 1 (level 0)
+			event(redo-complete)
 			r2
 			event(redo) entry 2 (level 0)
 			r2post
 			event(post-redo) entry 2 (level 0)
+			event(redo-complete)
 			r4
 			event(redo) entry 4 (level 0)
 			r4post
 			event(post-redo) entry 4 (level 0)
+			event(redo-complete)
 			----goToIndex back
 			u4pre
 			event(pre-undo) entry 4 (level 0)
 			u4
 			event(undo) entry 4 (level 0)
+			event(undo-complete)
 			u2pre
 			event(pre-undo) entry 2 (level 0)
 			u2
 			event(undo) entry 2 (level 0)
+			event(undo-complete)
 			----goToIndex forward
 			r2
 			event(redo) entry 2 (level 0)
 			r2post
 			event(post-redo) entry 2 (level 0)
+			event(redo-complete)
 			r4
 			event(redo) entry 4 (level 0)
 			r4post
 			event(post-redo) entry 4 (level 0)
+			event(redo-complete)
 		]]>),
 		log.join('\n')
 	);
@@ -602,6 +649,7 @@ function test_undoRedo_skip()
 			event(pre-undo) normal (level 0)
 			u normal
 			event(undo) normal (level 0)
+			event(undo-complete)
 			----
 			event(pre-undo) skip both (level 0)
 			u both
@@ -612,6 +660,7 @@ function test_undoRedo_skip()
 			event(pre-undo) skip redo (level 0)
 			u redo
 			event(undo) skip redo (level 0)
+			event(undo-complete)
 			----
 			r redo
 			event(redo) skip redo (level 0)
@@ -619,6 +668,7 @@ function test_undoRedo_skip()
 			r undo
 			event(redo) skip undo (level 0)
 			event(post-redo) skip undo (level 0)
+			event(redo-complete)
 			----
 			r both
 			event(redo) skip both (level 0)
@@ -626,6 +676,7 @@ function test_undoRedo_skip()
 			r normal
 			event(redo) normal (level 0)
 			event(post-redo) normal (level 0)
+			event(redo-complete)
 		]]>),
 		log.join('\n')
 	);
@@ -682,10 +733,12 @@ function test_undoRedo_wait()
 			event(pre-undo) delayed (level 0)
 			--waiting
 			event(undo) delayed (level 0)
+			event(undo-complete)
 			----
 			event(redo) delayed (level 0)
 			--waiting
 			event(post-redo) delayed (level 0)
+			event(redo-complete)
 		]]>),
 		log.join('\n')
 	);
@@ -755,12 +808,14 @@ function test_doOperation()
 			event(pre-undo) deep (level 2)
 			event(undo) deep (level 2)
 			--canceled
+			event(undo-complete)
 			----
 			event(redo) parent (level 0)
 			event(redo) child (level 1)
 			event(redo) deep (level 2)
 			event(post-redo) deep (level 2)
 			--canceled
+			event(redo-complete)
 		]]>),
 		log.join('\n')
 	);
@@ -826,6 +881,7 @@ function test_doOperation_canceledByEventListener()
 			event(undo) deep (level 2)
 			event(undo) child (level 1)
 			--canceled
+			event(undo-complete)
 			----
 			event(redo) parent (level 0)
 			event(redo) child (level 1)
@@ -833,6 +889,7 @@ function test_doOperation_canceledByEventListener()
 			event(post-redo) deep (level 2)
 			event(post-redo) child (level 1)
 			--canceled
+			event(redo-complete)
 		]]>),
 		log.join('\n')
 	);
@@ -906,21 +963,25 @@ function test_doOperation_wait()
 			event(pre-undo) delayed child (level 1)
 			event(undo) delayed child (level 1)
 			event(undo) normal parent (level 0)
+			event(undo-complete)
 			----
 			event(pre-undo) delayed parent (level 0)
 			event(pre-undo) normal child (level 1)
 			event(undo) normal child (level 1)
 			event(undo) delayed parent (level 0)
+			event(undo-complete)
 			----
 			event(redo) delayed parent (level 0)
 			event(redo) normal child (level 1)
 			event(post-redo) normal child (level 1)
 			event(post-redo) delayed parent (level 0)
+			event(redo-complete)
 			----
 			event(redo) normal parent (level 0)
 			event(redo) delayed child (level 1)
 			event(post-redo) delayed child (level 1)
 			event(post-redo) normal parent (level 0)
+			event(redo-complete)
 		]]>),
 		log.join('\n')
 	);
@@ -993,14 +1054,16 @@ function test_fakeUndoRedo()
 
 	function assertFakeUndoSuccess(aCurrent, aEntry, aExpected)
 	{
+		log = [];
 		history.index = aCurrent;
 		sv.fakeUndo(aEntry, win);
 		assert.equals(aExpected, history.index);
-		assert.equals([], log);
+		assert.equals(['event(undo-complete)'], log);
 	}
 
 	function assertFakeUndoFail(aCurrent, aEntry)
 	{
+		log = [];
 		history.index = aCurrent;
 		sv.fakeUndo(aEntry, win);
 		var current = Math.min(aCurrent, history.entries.length-1);
@@ -1024,14 +1087,16 @@ function test_fakeUndoRedo()
 
 	function assertFakeRedoSuccess(aCurrent, aEntry, aExpected)
 	{
+		log = [];
 		history.index = aCurrent;
 		sv.fakeRedo(aEntry, win);
 		assert.equals(aExpected, history.index);
-		assert.equals([], log);
+		assert.equals(['event(redo-complete)'], log);
 	}
 
 	function assertFakeRedoFail(aCurrent, aEntry)
 	{
+		log = [];
 		history.index = aCurrent;
 		sv.fakeRedo(aEntry, win);
 		var current = Math.max(aCurrent, 0);
