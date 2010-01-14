@@ -653,9 +653,9 @@
 			if (!options.name)
 				options.name = 'window';
 			if (!options.entry)
-				throw new Error('target entry must be specified.\n'+this._getStackTrace());
+				throw new Error('target entry must be specified.');
 			if (!options.window || options.window.closed)
-				throw new Error('windows must be specified.\n'+this._getStackTrace());
+				throw new Error('windows must be specified.');
 
 			var history = this.getHistory(options.name, options.window)._original;
 			var message = 'fakeUndo for '+name+' ('+options.entry.label+')';
@@ -679,9 +679,9 @@
 			if (!options.name)
 				options.name = 'window';
 			if (!options.entry)
-				throw new Error('target entry must be specified.\n'+this._getStackTrace());
+				throw new Error('target entry must be specified.');
 			if (!options.window || options.window.closed)
-				throw new Error('windows must be specified.\n'+this._getStackTrace());
+				throw new Error('windows must be specified.');
 
 			var history = this.getHistory(options.name, options.window)._original;
 			var message = 'fakeRedo for '+name+' ('+options.entry.label+')';
@@ -710,7 +710,7 @@
 		getWindowId : function(aWindow, aDefaultId)
 		{
 			if (!aWindow)
-				throw new Error('window must be specified.\n'+this._getStackTrace());
+				throw new Error('window must be specified.');
 
 			var root = aWindow.document.documentElement;
 			var id = root.getAttribute(this.WINDOW_ID) || aDefaultId;
@@ -726,7 +726,7 @@
 		setWindowId : function(aWindow, aDefaultId)
 		{
 			if (!aWindow)
-				throw new Error('window must be specified.\n'+this._getStackTrace());
+				throw new Error('window must be specified.');
 
 			var id = aDefaultId;
 			var root = aWindow.document.documentElement;
@@ -753,7 +753,7 @@
 		getWindowById : function(aId)
 		{
 			if (!aId)
-				throw new Error('window id must be specified.\n'+this._getStackTrace());
+				throw new Error('window id must be specified.');
 
 			var targets = WindowMediator.getEnumerator(null);
 			while (targets.hasMoreElements())
@@ -768,7 +768,7 @@
 		getElementId : function(aElement, aDefaultId)
 		{
 			if (!aElement)
-				throw new Error('DOM element must be specified.\n'+this._getStackTrace());
+				throw new Error('DOM element must be specified.');
 
 			var id = aElement.getAttribute(this.ELEMENT_ID) || aDefaultId;
 			try {
@@ -783,7 +783,7 @@
 		setElementId : function(aElement, aDefaultId)
 		{
 			if (!aElement)
-				throw new Error('DOM element must be specified.\n'+this._getStackTrace());
+				throw new Error('DOM element must be specified.');
 
 			var id = aDefaultId;
 
@@ -811,7 +811,7 @@
 		{
 			var options = this._getElementOptionsFromArguments(arguments);
 			if (!options.id)
-				throw new Error('element id must be specified.\n'+this._getStackTrace());
+				throw new Error('element id must be specified.');
 			return this._evaluateXPath(
 					'descendant::*[@'+this.ELEMENT_ID+'="'+options.id+'"][1]',
 					options.parent,
@@ -841,7 +841,7 @@
 				return this.getWindowId(aTarget.defaultView, aDefaultId);
 			if (aTarget instanceof Ci.nsIDOMElement)
 				return this.getElementId(aTarget, aDefaultId);
-			throw new Error(aTarget+' is an unknown type item.\n'+this._getStackTrace());
+			throw new Error(aTarget+' is an unknown type item.');
 		},
 
 		getTargetById : function()
@@ -853,14 +853,14 @@
 				return false;
 			});
 			if (!id)
-				throw new Error('target id must be specified.\n'+this._getStackTrace());
+				throw new Error('target id must be specified.');
 
 			if (id.indexOf('window-') == 0)
 				return this.getWindowById.apply(this, arguments);
 			if (id.indexOf('element-') == 0)
 				return this.getElementById.apply(this, arguments);
 
-			throw new Error(id+' is an unknown type id.\n'+this._getStackTrace());
+			throw new Error(id+' is an unknown type id.');
 		},
 
 		getTargetsByIds : function()
@@ -884,7 +884,7 @@
 					otherArgs.push(aArg);
 			});
 			if (!ids.length)
-				throw new Error('target id must be specified.\n'+this._getStackTrace());
+				throw new Error('target id must be specified.');
 
 			return ids.map(function(aId) {
 					return this.getTargetById.apply(this, [aId].concat(otherArgs));
@@ -979,18 +979,6 @@
 		destroy : function()
 		{
 			window.removeEventListener('unload', this, false);
-		},
-
-		_getStackTrace : function()
-		{
-			var stacks = [];
-			var stack = Components.stack;
-			while (stack = stack.caller)
-			{
-				stacks.push(stack);
-			}
-			stacks.pop();
-			return stacks.join('\n');
 		},
 
 		EVENT_TYPE_PREFIX : 'UIOperationHistory',
