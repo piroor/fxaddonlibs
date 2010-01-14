@@ -180,6 +180,12 @@ function test_getId()
 	assert.isNotNull(id);
 	var elementFromId = sv.getElementById(id, win);
 	assert.equals(element, elementFromId);
+
+	assert.isNull(sv.getId(''));
+	assert.isNull(sv.getId(0));
+	assert.isNull(sv.getId(false));
+	assert.isNull(sv.getId(null));
+	assert.isNull(sv.getId(undefined));
 }
 
 test_getTargetById.setUp = windowSetUp;
