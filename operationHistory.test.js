@@ -186,6 +186,9 @@ function test_getId()
 	assert.isNull(sv.getId(false));
 	assert.isNull(sv.getId(null));
 	assert.isNull(sv.getId(undefined));
+	assert.raises('foo is an unknown type item.', function() {
+		sv.getId('foo');
+	});
 }
 
 test_getTargetById.setUp = windowSetUp;
