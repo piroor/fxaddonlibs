@@ -77,7 +77,7 @@
    http://www.cozmixng.org/repos/piro/fx3-compatibility-lib/trunk/operationHistory.test.js
 */
 (function() {
-	const currentRevision = 59;
+	const currentRevision = 60;
 
 	if (!('piro.sakura.ne.jp' in window)) window['piro.sakura.ne.jp'] = {};
 
@@ -227,6 +227,8 @@
 							((history.inOperationCount ? entry.label : history.toString())
 								.replace(/^/gm, '    ')),
 							history.inOperationCount);
+
+						self._dispatchUpdateEvent(history, options.window);
 					};
 
 				try {
@@ -342,7 +344,7 @@
 								}
 							}
 							try {
-								if (!self._dispatchEvent(
+								if (!self._dispatchUndoRedoEvent(
 										(preProcess ? 'PreUndo' : 'Undo' )+':'+options.name,
 										history,
 										entry,
@@ -370,8 +372,10 @@
 
 			var onFinish = function() {
 					self._setUndoingState(options.key, false);
-					if (processed)
+					if (processed) {
 						self._dispatchCompleteEvent('Undo', history, window);
+						self._dispatchUpdateEvent(history, window);
+					}
 					log('  => undo done\n'+history.toString());
 				};
 
@@ -485,7 +489,7 @@
 								}
 							}
 							try {
-								if (!self._dispatchEvent(
+								if (!self._dispatchUndoRedoEvent(
 										(postProcess ? 'PostRedo' : 'Redo' )+':'+options.name,
 										history,
 										entry,
@@ -512,8 +516,10 @@
 
 			var onFinish = function() {
 					self._setRedoingState(options.key, false);
-					if (processed)
+					if (processed) {
 						self._dispatchCompleteEvent('Redo', history, window);
+						self._dispatchUpdateEvent(history, window);
+					}
 					log('  => redo done\n'+history.toString());
 				};
 
@@ -703,7 +709,8 @@
 		clear : function()
 		{
 			var options = this._getHistoryOptionsFromArguments(arguments);
-			return options.history.clear();
+			options.history.clear();
+			this._dispatchUpdateEvent(options.history, options.window);
 		},
 
 
@@ -983,12 +990,14 @@
 
 		EVENT_TYPE_PREFIX : 'UIOperationHistory',
 
-		_dispatchEvent : function(aType, aHistory, aEntry, aParams)
+		_dispatchUndoRedoEvent : function(aType, aHistory, aEntry, aParams)
 		{
 			var d = aParams.window ? aParams.window.document : document ;
 			var event = d.createEvent('Events');
 			event.initEvent(this.EVENT_TYPE_PREFIX+aType, true, true);
 
+			if (aHistory.constructor == UIHistory)
+				aHistory = new UIHistoryProxy(aHistory);
 			event.history = aHistory;
 			event.entry   = aEntry;
 			event.params  = aParams;
@@ -1009,8 +1018,28 @@
 			var d = aWindow ? aWindow.document : document ;
 			var event = d.createEvent('Events');
 			event.initEvent(this.EVENT_TYPE_PREFIX+aType+'Complete:'+aHistory.name, true, false);
+
+			if (aHistory.constructor == UIHistory)
+				aHistory = new UIHistoryProxy(aHistory);
 			event.history = aHistory;
 			event.manager = this;
+
+			var result = d.dispatchEvent(event);
+			log('event dispacthed: '+event.type+' ('+result+')', 3);
+			return result;
+		},
+
+		_dispatchUpdateEvent : function(aHistory, aWindow)
+		{
+			var d = aWindow ? aWindow.document : document ;
+			var event = d.createEvent('Events');
+			event.initEvent(this.EVENT_TYPE_PREFIX+'Update:'+aHistory.name, true, false);
+
+			if (aHistory.constructor == UIHistory)
+				aHistory = new UIHistoryProxy(aHistory);
+			event.history = new UIHistoryProxy(aHistory);
+			event.manager = this;
+
 			var result = d.dispatchEvent(event);
 			log('event dispacthed: '+event.type+' ('+result+')', 3);
 			return result;
@@ -1373,11 +1402,11 @@
 
 		get canUndo()
 		{
-			return this.index >= 0;
+			return this.entries.length && this.index >= 0 ? true : false ;
 		},
 		get canRedo()
 		{
-			return this.index < this.entries.length;
+			return this.entries.length && this.index < this.entries.length-1 ? true : false ;
 		},
 
 		get currentEntry()
@@ -1480,6 +1509,15 @@
 
 		get inOperationCount() { return this._original.inOperationCount; },
 		set inOperationCount(aValue) { return this._original.inOperationCount = aValue; },
+
+		get canUndo()
+		{
+			return this.entries.length && this._original.index >= 0 ? true : false ;
+		},
+		get canRedo()
+		{
+			return this.entries.length && this._original.index < this.entries.length-1 ? true : false ;
+		},
 
 		clear : function() { return this._original.clear(); },
 		toString : function() { return this._original.toString(); }
