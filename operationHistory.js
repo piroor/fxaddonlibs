@@ -77,7 +77,7 @@
    http://www.cozmixng.org/repos/piro/fx3-compatibility-lib/trunk/operationHistory.test.js
 */
 (function() {
-	const currentRevision = 61;
+	const currentRevision = 62;
 
 	if (!('piro.sakura.ne.jp' in window)) window['piro.sakura.ne.jp'] = {};
 
@@ -559,7 +559,7 @@
 		{
 			var options = this._getHistoryOptionsFromArguments(arguments);
 			var history = options.history;
-			var index = Math.max(0, Math.min(history.entries.length-1, options.index));
+			var index = Math.max(-1, Math.min(history.entries.length, options.index));
 			var current = history.index;
 
 			if (index == current)
