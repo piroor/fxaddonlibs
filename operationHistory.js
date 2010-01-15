@@ -77,7 +77,7 @@
    http://www.cozmixng.org/repos/piro/fx3-compatibility-lib/trunk/operationHistory.test.js
 */
 (function() {
-	const currentRevision = 62;
+	const currentRevision = 63;
 
 	if (!('piro.sakura.ne.jp' in window)) window['piro.sakura.ne.jp'] = {};
 
@@ -571,12 +571,12 @@
 					{
 						let result;
 						if (index < current) {
-							if (history.index <= index)
+							if (history.index <= index || !history.canUndo)
 								break;
 							result = self.undo(options.name, options.window);
 						}
 						else {
-							if (history.index >= index)
+							if (history.index >= index || !history.canRedo)
 								break;
 							result = self.redo(options.name, options.window);
 						}
