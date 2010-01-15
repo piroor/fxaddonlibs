@@ -1455,7 +1455,7 @@
 			return [entry, names];
 		},
 
-		toString : function()
+		toString : function(aFull)
 		{
 			try {
 				var entries = this.entries || [];
@@ -1463,14 +1463,19 @@
 				var index = this.index;
 				var string = entries
 								.map(function(aEntry, aIndex) {
-									var children = metaData[aIndex].children.length;
-									children = children ? ' ('+children+')' : '' ;
+									var children = metaData[aIndex].children;
+									var childrenCount = children.length ? ' ('+children.length+')' : '' ;
 									var name = aEntry.name;
 									name = name ? ' ['+name+']' : '' ;
-									return (aIndex == index ? '*' : ' ' )+
+									var line = (aIndex == index ? '*' : ' ' )+
 											' '+aIndex+': '+aEntry.label+
 											name+
-											children;
+											childrenCount;
+									if (aFull)
+										children.forEach(function(aChild, aChildIndex) {
+											line += '\n     '+aIndex+'.'+aChildIndex+' '+aChild.label;
+										});
+									return line;
 								}, this)
 								.join('\n');
 				if (index < 0)
@@ -1520,7 +1525,7 @@
 		},
 
 		clear : function() { return this._original.clear(); },
-		toString : function() { return this._original.toString(); }
+		toString : function(aFull) { return this._original.toString(aFull); }
 	};
 
 	function UIHistoryMetaData()
