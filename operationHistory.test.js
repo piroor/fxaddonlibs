@@ -471,8 +471,14 @@ function test_undoRedo_goToIndex()
 
 	log.push('----goToIndex back');
 	sv.goToIndex(0);
+	log.push('----goToIndex same');
+	sv.goToIndex(0);
 	log.push('----goToIndex forward');
 	sv.goToIndex(2);
+	log.push('----goToIndex back');
+	sv.goToIndex(-5);
+	log.push('----goToIndex forward');
+	sv.goToIndex(5);
 
 	assert.equals(
 		toSimpleList(<![CDATA[
@@ -593,7 +599,40 @@ function test_undoRedo_goToIndex()
 			u2
 			event(undo) entry 2 (level 0)
 			event(undo-complete)
+			----goToIndex same
 			----goToIndex forward
+			r2
+			event(redo) entry 2 (level 0)
+			r2post
+			event(post-redo) entry 2 (level 0)
+			event(redo-complete)
+			r4
+			event(redo) entry 4 (level 0)
+			r4post
+			event(post-redo) entry 4 (level 0)
+			event(redo-complete)
+			----goToIndex back
+			u4pre
+			event(pre-undo) entry 4 (level 0)
+			u4
+			event(undo) entry 4 (level 0)
+			event(undo-complete)
+			u2pre
+			event(pre-undo) entry 2 (level 0)
+			u2
+			event(undo) entry 2 (level 0)
+			event(undo-complete)
+			u1pre
+			event(pre-undo) entry 1 (level 0)
+			u1
+			event(undo) entry 1 (level 0)
+			event(undo-complete)
+			----goToIndex forward
+			r1
+			event(redo) entry 1 (level 0)
+			r1post
+			event(post-redo) entry 1 (level 0)
+			event(redo-complete)
 			r2
 			event(redo) entry 2 (level 0)
 			r2post
