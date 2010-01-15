@@ -77,7 +77,7 @@
    http://www.cozmixng.org/repos/piro/fx3-compatibility-lib/trunk/operationHistory.test.js
 */
 (function() {
-	const currentRevision = 60;
+	const currentRevision = 61;
 
 	if (!('piro.sakura.ne.jp' in window)) window['piro.sakura.ne.jp'] = {};
 
@@ -992,9 +992,16 @@
 
 		_dispatchUndoRedoEvent : function(aType, aHistory, aEntry, aParams)
 		{
-			var d = aParams.window ? aParams.window.document : document ;
+			var type = this.EVENT_TYPE_PREFIX+aType;
+			var w = aParams.window ? aParams.window : window ;
+			if (w.closed) {
+				log('event is not dispacthed for closed window: '+type, 3);
+				return true;
+			}
+
+			var d = w.document;
 			var event = d.createEvent('Events');
-			event.initEvent(this.EVENT_TYPE_PREFIX+aType, true, true);
+			event.initEvent(type, true, true);
 
 			if (aHistory.constructor == UIHistory)
 				aHistory = new UIHistoryProxy(aHistory);
@@ -1009,15 +1016,22 @@
 			event.skip     = aParams.skip;
 
 			var result = d.dispatchEvent(event);
-			log('event dispacthed: '+event.type+' ('+result+')', 3);
+			log('event dispacthed: '+type+' ('+result+')', 3);
 			return result;
 		},
 
 		_dispatchCompleteEvent : function(aType, aHistory, aWindow)
 		{
-			var d = aWindow ? aWindow.document : document ;
+			var type = this.EVENT_TYPE_PREFIX+aType+'Complete:'+aHistory.name;
+			var w = aWindow ? aWindow : window ;
+			if (w.closed) {
+				log('event is not dispacthed for closed window: '+type, 3);
+				return true;
+			}
+
+			var d = w.document;
 			var event = d.createEvent('Events');
-			event.initEvent(this.EVENT_TYPE_PREFIX+aType+'Complete:'+aHistory.name, true, false);
+			event.initEvent(type, true, false);
 
 			if (aHistory.constructor == UIHistory)
 				aHistory = new UIHistoryProxy(aHistory);
@@ -1025,15 +1039,22 @@
 			event.manager = this;
 
 			var result = d.dispatchEvent(event);
-			log('event dispacthed: '+event.type+' ('+result+')', 3);
+			log('event dispacthed: '+type+' ('+result+')', 3);
 			return result;
 		},
 
 		_dispatchUpdateEvent : function(aHistory, aWindow)
 		{
-			var d = aWindow ? aWindow.document : document ;
+			var type = this.EVENT_TYPE_PREFIX+'Update:'+aHistory.name;
+			var w = aWindow ? aWindow : window ;
+			if (w.closed) {
+				log('event is not dispacthed for closed window: '+type, 3);
+				return true;
+			}
+
+			var d = w.document;
 			var event = d.createEvent('Events');
-			event.initEvent(this.EVENT_TYPE_PREFIX+'Update:'+aHistory.name, true, false);
+			event.initEvent(type, true, false);
 
 			if (aHistory.constructor == UIHistory)
 				aHistory = new UIHistoryProxy(aHistory);
@@ -1041,7 +1062,7 @@
 			event.manager = this;
 
 			var result = d.dispatchEvent(event);
-			log('event dispacthed: '+event.type+' ('+result+')', 3);
+			log('event dispacthed: '+type+' ('+result+')', 3);
 			return result;
 		},
 
