@@ -43,23 +43,13 @@
 	window['piro.sakura.ne.jp'].prefs = {
 		revision : currentRevision,
 
-		get Prefs() 
-		{
-			delete this.Prefs;
-			this.Prefs = Cc['@mozilla.org/preferences;1']
-							.getService(Ci.nsIPrefBranch)
-							.QueryInterface(Ci.nsIPrefBranch2);
-			return this.Prefs;
-		},
+		Prefs : Cc['@mozilla.org/preferences;1']
+					.getService(Ci.nsIPrefBranch)
+					.QueryInterface(Ci.nsIPrefBranch2),
 
-		get DefaultPrefs() 
-		{
-			delete this.DefaultPrefs;
-			this.DefaultPrefs = Cc['@mozilla.org/preferences-service;1']
-							.getService(Ci.nsIPrefService)
-							.getDefaultBranch(null);
-			return this.DefaultPrefs;
-		},
+		DefaultPrefs : Cc['@mozilla.org/preferences-service;1']
+					.getService(Ci.nsIPrefService)
+					.getDefaultBranch(null),
 	 
 		getPref : function(aPrefstring, aBranch) 
 		{
