@@ -72,7 +72,8 @@
 					width   : 0,
 					height  : 0,
 					screenX : 0,
-					screenY : 0
+					screenY : 0,
+					element : aNode
 				};
 			try {
 				var zoom = this.getZoom(aNode.ownerDocument.defaultView);
