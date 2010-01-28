@@ -7,13 +7,13 @@
                          .boxObject
                          .getBoxObjectFor(HTMLElement);
 
- lisence: The MIT License, Copyright (c) 2009 SHIMODA "Piro" Hiroshi
+ lisence: The MIT License, Copyright (c) 2009-2010 SHIMODA "Piro" Hiroshi
    http://www.cozmixng.org/repos/piro/fx3-compatibility-lib/trunk/license.txt
  original:
    http://www.cozmixng.org/repos/piro/fx3-compatibility-lib/trunk/boxObject.js
 */
 (function() {
-	const currentRevision = 5;
+	const currentRevision = 6;
 
 	if (!('piro.sakura.ne.jp' in window)) window['piro.sakura.ne.jp'] = {};
 
@@ -46,7 +46,8 @@
 					width   : boxObject.width,
 					height  : boxObject.height,
 					screenX : boxObject.screenX,
-					screenY : boxObject.screenY
+					screenY : boxObject.screenY,
+					element : aNode
 				};
 			if (!aUnify) return box;
 
