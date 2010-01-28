@@ -110,10 +110,12 @@
 			catch(e) {
 			}
 
-			for (let i in box)
-			{
-				box[i] = Math.round(box[i]);
-			}
+			'x,y,screenX,screenY,width,height,left,top,right,bottom'
+				.split(',')
+				.forEach(function(aProperty) {
+					if (aProperty in box)
+						box[aProperty] = Math.round(box[aProperty]);
+				});
 
 			return box;
 		},
