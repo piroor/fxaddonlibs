@@ -12,7 +12,7 @@
    http://www.cozmixng.org/repos/piro/fx3-compatibility-lib/trunk/stopRendering.js
 */
 (function() {
-	const currentRevision = 3;
+	const currentRevision = 4;
 
 	if (!('piro.sakura.ne.jp' in window)) window['piro.sakura.ne.jp'] = {};
 
@@ -45,9 +45,7 @@
 
 		stop : function()
 		{
-			if (this._stopLevel == 0) {
-				this.baswWindow.setPosition(window.top.innerWidth * 3, window.top.innerHeight * 3);
-			}
+			this.baswWindow.setPosition(window.top.innerWidth * 3, window.top.innerHeight * 3);
 			this._stopLevel++;
 		},
 
