@@ -26,7 +26,7 @@
    http://www.cozmixng.org/repos/piro/fx3-compatibility-lib/trunk/prefs.test.js
 */
 (function() {
-	const currentRevision = 5;
+	const currentRevision = 6;
 
 	if (!('piro.sakura.ne.jp' in window)) window['piro.sakura.ne.jp'] = {};
 
@@ -56,7 +56,7 @@
 			if (!aInterface || aInterface instanceof Ci.nsIPrefBranch)
 				[aBranch, aInterface] = [aInterface, aBranch];
 
-			if (!aBranch) aBranch = this.Prefs;
+			aBranch = aBranch || this.Prefs;
 
 			if (aInterface)
 				return (aBranch.getPrefType(aPrefstring) == aBranch.PREF_INVALID) ?
@@ -87,7 +87,7 @@
 	 
 		setPref : function(aPrefstring, aNewValue, aBranch) 
 		{
-			if (!aBranch) aBranch = this.Prefs;
+			aBranch = aBranch || this.Prefs;
 			switch (typeof aNewValue)
 			{
 				case 'string':
@@ -110,6 +110,23 @@
 		{
 			if (this.Prefs.prefHasUserValue(aPrefstring))
 				this.Prefs.clearUserPref(aPrefstring);
+		},
+	 
+		getDescendant : function(aRoot, aBranch) 
+		{
+			aBranch = aBranch || this.Prefs;
+			return aBranch.getChildList(aRoot, {}).sort();
+		},
+	 
+		getChildren : function(aRoot, aBranch) 
+		{
+			return this.getDescendant(aRoot, aBranch)
+					.filter(function(aPrefstring) {
+						var name = aPrefstring.replace(aRoot, '');
+						if (name.charAt(0) == '.')
+							name = name.substring(1);
+						return name.indexOf('.') < 0;
+					});
 		},
 	 
 		addPrefListener : function(aObserver) 

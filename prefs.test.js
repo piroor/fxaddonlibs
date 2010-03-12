@@ -51,6 +51,53 @@ function test_setAndGetPref()
 	assertSetAndGetPref(random+'.string', 'string');
 }
 
+test_getChildren.setUp = function() {
+	utils.clearPref(random+'.item1');
+	utils.clearPref(random+'.item1.child1');
+	utils.clearPref(random+'.item1.child2');
+	utils.clearPref(random+'.item2');
+	utils.clearPref(random+'.item2.child1');
+	utils.clearPref(random+'.item2.child2');
+	utils.clearPref(random+'.item3');
+	utils.clearPref(random+'.item3.child1');
+	utils.clearPref(random+'.item3.child2');
+};
+test_getChildren.tearDown = test_getChildren.setUp;
+function test_getChildren()
+{
+	utils.setPref(random+'.item1', true);
+	utils.setPref(random+'.item1.child1', true);
+	utils.setPref(random+'.item1.child2', true);
+	utils.setPref(random+'.item2', true);
+	utils.setPref(random+'.item2.child1', true);
+	utils.setPref(random+'.item2.child2', true);
+	utils.setPref(random+'.item3', true);
+	utils.setPref(random+'.item3.child1', true);
+	utils.setPref(random+'.item3.child2', true);
+
+	var descendant = [
+			random+'.item1',
+			random+'.item1.child1',
+			random+'.item1.child2',
+			random+'.item2',
+			random+'.item2.child1',
+			random+'.item2.child2',
+			random+'.item3',
+			random+'.item3.child1',
+			random+'.item3.child2'
+		];
+	assert.equals(descendant, sv.getDescendant(random));
+	assert.equals(descendant, sv.getDescendant(random+'.'));
+
+	var children = [
+			random+'.item1',
+			random+'.item2',
+			random+'.item3'
+		];
+	assert.equals(children, sv.getChildren(random));
+	assert.equals(children, sv.getChildren(random+'.'));
+}
+
 function test_listeners()
 {
 	var singleDomainListener = {
