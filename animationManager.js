@@ -23,6 +23,18 @@
  original:
    http://www.cozmixng.org/repos/piro/fx3-compatibility-lib/trunk/animationManager.js
 */
+
+if ('window' in this && !window) { // work as a JS Code Module
+	var EXPORTED_SYMBOLS = ['window', 'animationManager'];
+
+	let ns = {};
+	Components.utils.import('resource://my-modules/namespace.jsm', ns);
+
+	var window = ns.getNamespaceFor('piro.sakura.ne.jp');
+	if (!('setInterval' in window))
+		Components.utils.import('resource://my-modules/jstimer.jsm', window);
+}
+
 (function() {
 	const currentRevision = 5;
 
@@ -136,3 +148,7 @@
 	if (tasks.length)
 		window['piro.sakura.ne.jp'].animationManager.start();
 })();
+
+if (window != this) { // work as a JS Code Module
+	var animationManager = window['piro.sakura.ne.jp'].animationManager;
+}

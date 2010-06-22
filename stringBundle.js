@@ -13,6 +13,16 @@
  original:
    http://www.cozmixng.org/repos/piro/fx3-compatibility-lib/trunk/stringBundle.js
 */
+
+if ('window' in this && !window) { // work as a JS Code Module
+	var EXPORTED_SYMBOLS = ['window', 'stringBundle'];
+
+	let ns = {};
+	Components.utils.import('resource://my-modules/namespace.jsm', ns);
+
+	var window = ns.getNamespaceFor('piro.sakura.ne.jp');
+}
+
 (function() {
 	const currentRevision = 1;
 
@@ -70,3 +80,7 @@
 		}
 	};
 })();
+
+if (window != this) { // work as a JS Code Module
+	var stringBundle = window['piro.sakura.ne.jp'].stringBundle;
+}

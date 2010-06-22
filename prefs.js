@@ -25,6 +25,16 @@
    http://www.cozmixng.org/repos/piro/fx3-compatibility-lib/trunk/prefs.js
    http://www.cozmixng.org/repos/piro/fx3-compatibility-lib/trunk/prefs.test.js
 */
+
+if ('window' in this && !window) { // work as a JS Code Module
+	var EXPORTED_SYMBOLS = ['window', 'prefs'];
+
+	let ns = {};
+	Components.utils.import('resource://my-modules/namespace.jsm', ns);
+
+	var window = ns.getNamespaceFor('piro.sakura.ne.jp');
+}
+
 (function() {
 	const currentRevision = 6;
 
@@ -152,3 +162,7 @@
 		}
 	};
 })();
+
+if (window != this) { // work as a JS Code Module
+	var prefs = window['piro.sakura.ne.jp'].prefs;
+}
