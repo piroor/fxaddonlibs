@@ -17,15 +17,6 @@ function tearDown()
 {
 }
 
-function test__getFrameOwnerFromFrame()
-{
-	assert.equals(gBrowser, sv._getFrameOwnerFromFrame(content));
-
-	yield Do(utils.loadURI('fixtures/frame.html'));
-	assert.equals(gBrowser, sv._getFrameOwnerFromFrame(content));
-	assert.equals($('frame2'), sv._getFrameOwnerFromFrame($('frame2').contentWindow));
-}
-
 test_getBoxObjectFromBoxObjectFor.setUp = function()
 {
 	yield Do(utils.loadURI('fixtures/box.xul'));
@@ -35,6 +26,7 @@ function test_getBoxObjectFromBoxObjectFor()
 	var button = $('button');
 	var originalBox = button.boxObject;
 	var box = {
+			element : button,
 			x       : originalBox.x,
 			y       : originalBox.y,
 			width   : originalBox.width,
@@ -46,10 +38,10 @@ function test_getBoxObjectFromBoxObjectFor()
 	assert.equals(box, sv.getBoxObjectFromBoxObjectFor(button));
 
 	var rect = button.getBoundingClientRect();
-	box.left   = Math.round(rect.left);
-	box.top    = Math.round(rect.top);
-	box.right  = Math.round(rect.right);
-	box.bottom = Math.round(rect.bottom);
+	box.left   = Math.ceil(rect.left);
+	box.top    = Math.ceil(rect.top);
+	box.right  = Math.ceil(rect.right);
+	box.bottom = Math.ceil(rect.bottom);
 	assert.equals(box, sv.getBoxObjectFromBoxObjectFor(button, true));
 }
 
@@ -81,6 +73,7 @@ function assertBoxObjectFromClientRect(aZoom)
 	function assertBoxObject(aActualBox, aNode)
 	{
 		var box = {
+				element : aNode,
 				x       : aActualBox.x,
 				y       : aActualBox.y,
 				width   : aActualBox.width,
@@ -102,6 +95,7 @@ function assertBoxObjectFromClientRect(aZoom)
 
 	assertBoxObject(
 		{
+			element : $('positionedBoxStatic'),
 			x       : 2,
 			y       : 2,
 			width   : 100 + 2 + 2,
@@ -118,6 +112,7 @@ function assertBoxObjectFromClientRect(aZoom)
 
 	assertBoxObject(
 		{
+			element : $('positionedBoxRelative'),
 			x       : 100 + 3,
 			y       : 100 + 2 + 2 + 30 + 3,
 			width   : 100 + 3 + 3,
@@ -134,6 +129,7 @@ function assertBoxObjectFromClientRect(aZoom)
 
 	assertBoxObject(
 		{
+			element : $('positionedBoxAbsolute'),
 			x       : root.offsetWidth - 100 - 4 - 4 - 10 + 4,
 			y       : 10 + 4,
 			width   : 100 + 4 + 4,
@@ -150,6 +146,7 @@ function assertBoxObjectFromClientRect(aZoom)
 
 	assertBoxObject(
 		{
+			element : $('positionedBoxFixed'),
 			x       : 40 + 5,
 			y       : 30 + 5,
 			width   : 100 + 5 + 5,
