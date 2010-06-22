@@ -36,7 +36,7 @@ const storage = Application.storage;
 if (!storage.has('sharednamespaces@piro.sakura.ne.jp'))
 	storage.set('sharednamespaces@piro.sakura.ne.jp', {});
 
-var namespaces = storage.get('sharednamespaces@piro.sakura.ne.jp');
+var namespaces = storage.get('sharednamespaces@piro.sakura.ne.jp', null);
 
 function getNamespaceFor(aName)
 {
