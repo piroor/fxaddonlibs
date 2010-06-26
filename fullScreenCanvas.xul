@@ -85,10 +85,11 @@ window.addEventListener('DOMContentLoaded', function() {
 						var b = aBrowser;
 						if (b.localName == 'subbrowser') b = b.browser;
 						var frame = b.contentWindow;
-						var x = (b.localName == 'tabbrowser' ? b.mCurrentBrowser : b ).boxObject.x;
-						var y = (b.localName == 'tabbrowser' ? b.mCurrentBrowser : b ).boxObject.y;
-						var bw = (b.localName == 'tabbrowser' ? b.mCurrentBrowser : b ).boxObject.width;
-						var bh = (b.localName == 'tabbrowser' ? b.mCurrentBrowser : b ).boxObject.height;
+						var box = (b.localName == 'tabbrowser' ? b.mCurrentBrowser : b ).boxObject;
+						var x = box.x;
+						var y = box.y;
+						var bw = box.width;
+						var bh = box.height;
 						var w = frame.innerWidth;
 						var h = frame.innerHeight;
 						ctx.save();
