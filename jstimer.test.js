@@ -14,45 +14,39 @@ function test_setTimeout()
 {
 	assert.isFunction(namespace.setTimeout);
 
-	var done = false;
-	var value = null;
+	var count = 0;
 	var id = namespace.setTimeout(
 			function(aValue) {
-				done = true;
-				value = aValue;
+				count += aValue;
 			},
 			300,
-			true
+			1
 		);
 
-	assert.isFalse(done);
-	assert.isNull(value);
-	yield 600;
-	assert.isTrue(done);
-	assert.isTrue(value);
+	assert.equals(0, count);
+	yield 400;
+	assert.equals(1, count);
+	yield 400;
+	assert.equals(1, count);
 }
 
 function test_clearTimeout()
 {
 	assert.isFunction(namespace.clearTimeout);
 
-	var done = false;
-	var value = null;
+	var count = 0;
 	var id = namespace.setTimeout(
 			function(aValue) {
-				done = true;
-				value = aValue;
+				count += aValue;
 			},
 			300,
-			true
+			1
 		);
 
-	assert.isFalse(done);
-	assert.isNull(value);
+	assert.equals(0, count);
 	namespace.clearTimeout(id);
-	yield 600;
-	assert.isFalse(done);
-	assert.isNull(value);
+	yield 400;
+	assert.equals(0, count);
 }
 
 function test_setInterval()
@@ -60,21 +54,17 @@ function test_setInterval()
 	assert.isFunction(namespace.setInterval);
 
 	var count = 0;
-	var values = [];
 	var id = namespace.setInterval(
 			function(aValue) {
-				count++;
-				values.push(aValue);
+				count += aValue;
 			},
 			200,
-			true
+			1
 		);
 
 	assert.equals(0, count);
-	assert.equals([], values);
 	yield 500;
 	assert.equals(2, count);
-	assert.equals([true, true], values);
 }
 
 function test_clearInterval()
@@ -82,20 +72,16 @@ function test_clearInterval()
 	assert.isFunction(namespace.clearInterval);
 
 	var count = 0;
-	var values = [];
 	var id = namespace.setInterval(
 			function(aValue) {
-				count++;
-				values.push(aValue);
+				count += aValue;
 			},
 			200,
-			true
+			1
 		);
 
 	assert.equals(0, count);
-	assert.equals([], values);
 	namespace.clearInterval(id);
 	yield 500;
 	assert.equals(0, count);
-	assert.equals([], values);
 }
