@@ -119,6 +119,12 @@ Timer.cancel = function(aId) {
 	if (timer)
 		timer.cancel();
 };
+Timer.cancelAll = function() {
+	for (var id in this.instances)
+	{
+		this.cancel(id);
+	}
+};
 Timer.getInstanceById = function(aId) {
 	return this.instances[aId] || null ;
 };

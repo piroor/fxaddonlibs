@@ -8,6 +8,11 @@ function setUp()
 
 function tearDown()
 {
+	for (var id in namespace.Timer.instances)
+	{
+		namespace.Timer.cancel(id);
+	}
+};
 }
 
 function test_setTimeout()
