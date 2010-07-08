@@ -8,14 +8,6 @@
        ok : function() { extensions.goToOptions('my.extension.id@example.com'); },
        ng : function() { alert('NOT INSTALLED'); }
      });
-     // just same to:
-     // extensions.isInstalled('my.extension.id@example.com', {
-     //   ok : function() {
-     //     extensions.isEnabled('my.extension.id@example.com', {
-     //       ok : function() { extensions.goToOptions('my.extension.id@example.com'); }
-     //     });
-     //   }
-     // });
      extensions.isInstalled('my.extension.id@example.com', {
        ok : function(aDir) {
          var dir = aDir; // nsILocalFile
@@ -25,10 +17,6 @@
    Synchronus: (DEPRECATED)
      if (extensions.isAvailable('my.extension.id@example.com'))
          extensions.goToOptions('my.extension.id@example.com');
-     // just same to:
-     // if (extensions.isInstalled('my.extension.id@example.com') &&
-     //     extensions.isEnabled('my.extension.id@example.com'))
-     //     extensions.goToOptions('my.extension.id@example.com');
      var dir = extensions.getInstalledLocation('my.extension.id@example.com'); // nsILocalFile
 
  lisence: The MIT License, Copyright (c) 2009-2010 SHIMODA "Piro" Hiroshi
@@ -125,27 +113,7 @@ if (typeof window == 'undefined') {
 
 		isAvailable : function(aId, aOKCallback, aNGCallback)
 		{
-			if (!aOKCallback)
-				return this._ExtensionManager ? this._isAvailable_EM(aId) : this._isAvailable_AM(aId) ;
-
-			var callbacks = this._formatCallbacks(aOKCallback, aNGCallback);
-			if (this._ExtensionManager) {
-				callbacks[this._isAvailable_EM(aId) ? 'ok' : 'ng']();
-			}
-			else {
-				AM.AddonManager.getAddonByID(aId, function(aAddon) {
-					callbacks[aAddon && aAddon.isActive ? 'ok' : 'ng']();
-				});
-			}
-		},
-		_isAvailable_EM : function(aId)
-		{
-			return (this._isInstalled_EM(aId) && this._isEnabled_EM(aId)) ? true : false ;
-		},
-		_isAvailable_AM : function(aId)
-		{
-			var addon = this._getInstalledAddonNow(aId);
-			return addon ? addon.isActive : false ;
+			return this.isEnabled(aId, aOKCallback, aNGCallback);
 		},
 
 
@@ -177,13 +145,17 @@ if (typeof window == 'undefined') {
 		isEnabled : function(aId, aOKCallback, aNGCallback)
 		{
 			if (!aOKCallback)
-				return this._ExtensionManager ? this._isEnabled_EM(aId) : this._isAvailable_AM(aId) ;
+				return this._ExtensionManager ? this._isEnabled_EM(aId) : this._isEnabled_AM(aId) ;
 
 			var callbacks = this._formatCallbacks(aOKCallback, aNGCallback);
-			if (this._ExtensionManager)
+			if (this._ExtensionManager) {
 				callbacks[this._isEnabled_EM(aId) ? 'ok' : 'ng']();
-			else
-				this.isAvailable(aId, callbacks);
+			}
+			else {
+				AM.AddonManager.getAddonByID(aId, function(aAddon) {
+					callbacks[aAddon && aAddon.isActive ? 'ok' : 'ng']();
+				});
+			}
 		},
 		_isEnabled_EM : function(aId)
 		{
@@ -215,6 +187,11 @@ if (typeof window == 'undefined') {
 			}
 
 			return !appDisabled && !userDisabled;
+		},
+		_isEnabled_AM : function(aId)
+		{
+			var addon = this._getInstalledAddonNow(aId);
+			return addon ? addon.isActive : false ;
 		},
 
 
