@@ -181,7 +181,7 @@ if (typeof window == 'undefined') {
 
 			var callbacks = this._formatCallbacks(aOKCallback, aNGCallback);
 			if (this._ExtensionManager)
-				callbacks[this._isInstalled_EM(aId) ? 'ok' : 'ng']();
+				callbacks[this._isEnabled_EM(aId) ? 'ok' : 'ng']();
 			else
 				this.isAvailable(aId, callbacks);
 		},
