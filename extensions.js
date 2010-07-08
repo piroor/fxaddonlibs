@@ -54,7 +54,7 @@ if (typeof window == 'undefined') {
 }
 
 (function() {
-	const currentRevision = 8;
+	const currentRevision = 9;
 
 	if (!('piro.sakura.ne.jp' in window)) window['piro.sakura.ne.jp'] = {};
 
@@ -77,7 +77,7 @@ if (typeof window == 'undefined') {
 		revision : currentRevision,
 
 		// Firefox 3.7 or later
-		_getInstalledAddon : function(aId)
+		_getInstalledAddonNow : function(aId)
 		{
 			var addon;
 			AM.AddonManager.getAddonByID(aId, function(aAddon) {
@@ -129,17 +129,11 @@ if (typeof window == 'undefined') {
 
 			var callbacks = this._formatCallbacks(aOKCallback, aNGCallback);
 			if (this._ExtensionManager) {
-				if (this._isAvailable_EM(aId))
-					callbacks.ok();
-				else
-					callbacks.ng();
+				callbacks[this._isAvailable_EM(aId) ? 'ok' : 'ng']();
 			}
 			else {
 				AM.AddonManager.getAddonByID(aId, function(aAddon) {
-					if (aAddon && aAddon.isActive)
-						callbacks.ok();
-					else
-						callbacks.ng();
+					callbacks[aAddon && aAddon.isActive ? 'ok' : 'ng']();
 				});
 			}
 		},
@@ -149,9 +143,8 @@ if (typeof window == 'undefined') {
 		},
 		_isAvailable_AM : function(aId)
 		{
-			var addon = this._getInstalledAddon(aId);
-			if (!addon) return false;
-			return addon.isActive;
+			var addon = this._getInstalledAddonNow(aId);
+			return addon ? addon.isActive : false ;
 		},
 
 
@@ -162,17 +155,11 @@ if (typeof window == 'undefined') {
 
 			var callbacks = this._formatCallbacks(aOKCallback, aNGCallback);
 			if (this._ExtensionManager) {
-				if (this._isInstalled_EM(aId))
-					callbacks.ok(this._getInstalledLocation_EM(aId));
-				else
-					callbacks.ng(null);
+				callbacks[this._isInstalled_EM(aId) ? 'ok' : 'ng']();
 			}
 			else {
 				AM.AddonManager.getAddonByID(aId, function(aAddon) {
-					if (aAddon)
-						callbacks.ok(null);
-					else
-						callbacks.ng(null);
+					callbacks[aAddon ? 'ok' : 'ng']();
 				});
 			}
 		},
@@ -182,25 +169,20 @@ if (typeof window == 'undefined') {
 		},
 		_isInstalled_AM : function(aId)
 		{
-			return this._getInstalledAddon(aId) ? true : false ;
+			return this._getInstalledAddonNow(aId) ? true : false ;
 		},
 
 
 		isEnabled : function(aId, aOKCallback, aNGCallback)
 		{
 			if (!aOKCallback)
-				return this._ExtensionManager ? this._isEnabled_EM(aId) : this._isEnabled_AM(aId) ;
+				return this._ExtensionManager ? this._isEnabled_EM(aId) : this._isAvailable_AM(aId) ;
 
 			var callbacks = this._formatCallbacks(aOKCallback, aNGCallback);
-			if (this._ExtensionManager) {
-				if (this._isInstalled_EM(aId))
-					callbacks.ok();
-				else
-					callbacks.ng();
-			}
-			else {
+			if (this._ExtensionManager)
+				callbacks[this._isInstalled_EM(aId) ? 'ok' : 'ng']();
+			else
 				this.isAvailable(aId, callbacks);
-			}
 		},
 		_isEnabled_EM : function(aId)
 		{
@@ -230,10 +212,6 @@ if (typeof window == 'undefined') {
 
 			return !appDisabled && !userDisabled;
 		},
-		_isEnabled_AM : function(aId)
-		{
-			return false;
-		},
 
 
 		getInstalledLocation : function(aId, aCallback)
@@ -247,9 +225,8 @@ if (typeof window == 'undefined') {
 			else {
 				AM.AddonManager.getAddonByID(aId, function(aAddon) {
 					var location = null;
-					if (aAddon && aAddon.isActive) {
+					if (aAddon && aAddon.isActive)
 						location = aAddon.getResourceURI('/').QueryInterface(Ci.nsIFileURL).file.clone();
-					}
 					aCallback(location);
 				});
 			}
@@ -257,16 +234,41 @@ if (typeof window == 'undefined') {
 		_getInstalledLocation_EM : function(aId)
 		{
 			var addon = this._ExtensionManager.getInstallLocation(aId);
-			if (!addon) return;
+			if (!addon) return null;
 			var dir = addon.location.clone();
 			dir.append(aId);
 			return dir;
 		},
 		_getInstalledLocation_AM : function(aId)
 		{
-			var addon = this._getInstalledAddon(aId);
+			var addon = this._getInstalledAddonNow(aId);
 			if (!addon || !addon.isActive) return null;
 			return addon.getResourceURI('/').QueryInterface(Ci.nsIFileURL).file.clone();
+		},
+
+		getVersion : function(aId, aCallback)
+		{
+			if (!aCallback)
+				return this._ExtensionManager ? this._getVersion_EM(aId) : this._getVersion_AM(aId) ;
+
+			if (this._ExtensionManager) {
+				aCallback(this._getVersion_EM(aId));
+			}
+			else {
+				AM.AddonManager.getAddonByID(aId, function(aAddon) {
+					aCallback(aAddon ? aAddon.version : null );
+				});
+			}
+		},
+		_getVersion_EM : function(aId)
+		{
+			var addon = this._ExtensionManager.getInstallLocation(aId);
+			return addon ? addon.version : null ;
+		},
+		_getVersion_AM : function(aId)
+		{
+			var addon = this._getInstalledAddonNow(aId);
+			return addon ? addon.version : null ;
 		},
 
 
@@ -276,11 +278,7 @@ if (typeof window == 'undefined') {
 			var callback = function(aURI) {
 					self.goToOptionsInternal(aURI, aOwnerWindow);
 				};
-
-			if (this._ExtensionManager)
-				this._getOptionsURI_EM(aId, callback);
-			else
-				this._getOptionsURI_AM(aId, callback);
+			return this._ExtensionManager ? this._getOptionsURI_EM(aId, callback) : this._getOptionsURI_AM(aId, callback);
 		},
 		_getOptionsURI_EM : function(aId, aCallback)
 		{
@@ -307,7 +305,7 @@ if (typeof window == 'undefined') {
 				return null;
 			}
 			else {
-				var addon = this._getInstalledAddon(aId);
+				var addon = this._getInstalledAddonNow(aId);
 				return (addon && addon.isActive) ? addon.optionsURL : null ;
 			}
 		},
