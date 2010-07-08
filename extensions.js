@@ -35,6 +35,7 @@
    http://www.cozmixng.org/repos/piro/fx3-compatibility-lib/trunk/license.txt
  original:
    http://www.cozmixng.org/repos/piro/fx3-compatibility-lib/trunk/extensions.js
+   http://www.cozmixng.org/repos/piro/fx3-compatibility-lib/trunk/extensions.test.js
 */
 
 /* To work as a JS Code Module */
@@ -186,6 +187,9 @@ if (typeof window == 'undefined') {
 		},
 		_isEnabled_EM : function(aId)
 		{
+			if (!this._isInstalled_EM(aId))
+				return false;
+
 			var res  = this._RDF.GetResource('urn:mozilla:item:'+aId);
 			var appDisabled = false;
 			try {
@@ -262,8 +266,22 @@ if (typeof window == 'undefined') {
 		},
 		_getVersion_EM : function(aId)
 		{
-			var addon = this._ExtensionManager.getInstallLocation(aId);
-			return addon ? addon.version : null ;
+			if (!this._isInstalled_EM(aId))
+				return null;
+
+			var res  = this._RDF.GetResource('urn:mozilla:item:'+aId);
+			var version = null;
+			try {
+				version = this._ExtensionManager.datasource.GetTarget(
+						res,
+						this._RDF.GetResource('http://www.mozilla.org/2004/em-rdf#version'),
+						true
+					).QueryInterface(Ci.nsIRDFLiteral)
+					.Value;
+			}
+			catch(e) {
+			}
+			return version;
 		},
 		_getVersion_AM : function(aId)
 		{
