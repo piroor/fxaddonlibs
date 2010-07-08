@@ -11,6 +11,8 @@
    http://www.cozmixng.org/repos/piro/fx3-compatibility-lib/trunk/license.txt
  original:
    http://www.cozmixng.org/repos/piro/fx3-compatibility-lib/trunk/boxObject.js
+   http://www.cozmixng.org/repos/piro/fx3-compatibility-lib/trunk/boxObject.test.js
+   http://www.cozmixng.org/repos/piro/fx3-compatibility-lib/trunk/fixtures/box.html
 */
 
 /* To work as a JS Code Module */
