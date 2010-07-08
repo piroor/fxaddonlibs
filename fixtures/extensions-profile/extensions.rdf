@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+<RDF:RDF xmlns:NS1="http://www.mozilla.org/2004/em-rdf#"
+         xmlns:NC="http://home.netscape.com/NC-rdf#"
+         xmlns:RDF="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+  <RDF:Seq RDF:about="urn:mozilla:item:root">
+    <RDF:li RDF:resource="urn:mozilla:item:disabled@example.com"/>
+  </RDF:Seq>
+  <RDF:Description RDF:about="urn:mozilla:item:disabled@example.com"
+                   NS1:installLocation="app-profile"
+                   NS1:version="0.1"
+                   NS1:updateURL="about:blank?update"
+                   NS1:optionsURL="about:blank?options"
+                   NS1:updateKey="key"
+                   NS1:name="disabled"
+                   NS1:description="disabled"
+                   NS1:creator="SHIMODA Hiroshi"
+                   NS1:homepageURL="about:blank?home"
+                   NS1:userDisabled="true">
+    <NS1:type NC:parseType="Integer">2</NS1:type>
+    <NS1:targetApplication RDF:resource="rdf:#$7CcZr"/>
+    <NS1:targetApplication RDF:resource="rdf:#$8CcZr"/>
+    <NS1:targetApplication RDF:resource="rdf:#$9CcZr"/>
+  </RDF:Description>
+  <RDF:Description RDF:about="rdf:#$7CcZr"
+                   NS1:id="{ec8030f7-c20a-464f-9b0e-13a3a9e97384}"
+                   NS1:minVersion="3.0"
+                   NS1:maxVersion="99.99.99.99" />
+  <RDF:Description RDF:about="rdf:#$8CcZr"
+                   NS1:id="{3550f703-e582-4d05-9a08-453d09bdfdc6}"
+                   NS1:minVersion="3.0"
+                   NS1:maxVersion="99.99.99.99" />
+  <RDF:Description RDF:about="rdf:#$9CcZr"
+                   NS1:id="toolkit@mozilla.org"
+                   NS1:minVersion="0"
+                   NS1:maxVersion="99" />
+</RDF:RDF>

@@ -1,3 +1,5 @@
+var profile = baseURL + 'fixtures/extensions-profile/';
+
 var namespace = { window : {} };
 utils.include('extensions.js', namespace, 'Shift_JIS');
 
@@ -18,7 +20,7 @@ var uxuVersion = '0.7.6+';
 
 var disabledLocation = utils.getFileFromKeyword('ProfD');
 disabledLocation.append('extensions');
-disabledLocation.append('disabled@clear-code.com');
+disabledLocation.append('disabled@example.com');
 
 var disabledVersion = '0.1';
 
@@ -39,7 +41,7 @@ function test_isAvailable_sync()
 {
 	assert.isTrue(sv.isAvailable('uxu@clear-code.com'));
 	assert.isFalse(sv.isAvailable('unknown@clear-code.com'));
-	assert.isFalse(sv.isAvailable('disabled@clear-code.com'));
+	assert.isFalse(sv.isAvailable('disabled@example.com'));
 }
 
 function test_isAvailable_async()
@@ -61,7 +63,7 @@ function test_isAvailable_async()
 	assert.equals('ng', lastCalled.value);
 
 	lastCalled.value = null;
-	sv.isAvailable('disabled@clear-code.com', {
+	sv.isAvailable('disabled@example.com', {
 		ok : function() { lastCalled.value = 'ok'; },
 		ng : function() { lastCalled.value = 'ng'; }
 	});
@@ -73,7 +75,7 @@ function test_isInstalled_sync()
 {
 	assert.isTrue(sv.isInstalled('uxu@clear-code.com'));
 	assert.isFalse(sv.isInstalled('unknown@clear-code.com'));
-	assert.isTrue(sv.isAvailable('disabled@clear-code.com'));
+	assert.isTrue(sv.isInstalled('disabled@example.com'));
 }
 
 function test_isInstalled_async()
@@ -95,7 +97,7 @@ function test_isInstalled_async()
 	assert.equals('ng', lastCalled.value);
 
 	lastCalled.value = null;
-	sv.isInstalled('disabled@clear-code.com', {
+	sv.isInstalled('disabled@example.com', {
 		ok : function() { lastCalled.value = 'ok'; },
 		ng : function() { lastCalled.value = 'ng'; }
 	});
@@ -107,7 +109,7 @@ function test_isEnabled_sync()
 {
 	assert.isTrue(sv.isEnabled('uxu@clear-code.com'));
 	assert.isFalse(sv.isEnabled('unknown@clear-code.com'));
-	assert.isFalse(sv.isEnabled('disabled@clear-code.com'));
+	assert.isFalse(sv.isEnabled('disabled@example.com'));
 }
 
 function test_isEnabled_async()
@@ -129,7 +131,7 @@ function test_isEnabled_async()
 	assert.equals('ng', lastCalled.value);
 
 	lastCalled.value = null;
-	sv.isEnabled('disabled@clear-code.com', {
+	sv.isEnabled('disabled@example.com', {
 		ok : function() { lastCalled.value = 'ok'; },
 		ng : function() { lastCalled.value = 'ng'; }
 	});
@@ -141,7 +143,7 @@ function test_getInstalledLocation_sync()
 {
 	assert.equals(uxuLocation.path, sv.getInstalledLocation('uxu@clear-code.com').path);
 	assert.isNull(sv.getInstalledLocation('unknown@clear-code.com'));
-	assert.equals(disabledLocation.path, sv.getInstalledLocation('disabled@clear-code.com').path);
+	assert.equals(disabledLocation.path, sv.getInstalledLocation('disabled@example.com').path);
 }
 
 function test_getInstalledLocation_async()
@@ -163,7 +165,7 @@ function test_getInstalledLocation_async()
 	assert.isNull(lastFile.value);
 
 	lastFile.value = null;
-	sv.getInstalledLocation('disabled@clear-code.com',
+	sv.getInstalledLocation('disabled@example.com',
 		function(aFile) { lastFile.value = aFile; });
 	utils.wait(function() {
 		return lastFile.value !== void(0);
@@ -175,7 +177,7 @@ function test_getVersion_sync()
 {
 	assert.equals(uxuVersion, sv.getVersion('uxu@clear-code.com'));
 	assert.isNull(sv.getVersion('unknown@clear-code.com'));
-	assert.equals(disabledVersion, sv.getVersion('disabled@clear-code.com'));
+	assert.equals(disabledVersion, sv.getVersion('disabled@example.com'));
 }
 
 function test_getVersion_async()
@@ -197,7 +199,7 @@ function test_getVersion_async()
 	assert.isNull(lastVersion.value);
 
 	lastVersion.value = null;
-	sv.getVersion('disabled@clear-code.com',
+	sv.getVersion('disabled@example.com',
 		function(aVersion) { lastVersion.value = aVersion; });
 	utils.wait(function() {
 		return lastVersion.value !== void(0);
