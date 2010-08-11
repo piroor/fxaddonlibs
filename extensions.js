@@ -43,7 +43,7 @@ if (typeof window == 'undefined') {
 }
 
 (function() {
-	const currentRevision = 10;
+	const currentRevision = 11;
 
 	if (!('piro.sakura.ne.jp' in window)) window['piro.sakura.ne.jp'] = {};
 
@@ -216,9 +216,7 @@ if (typeof window == 'undefined') {
 		{
 			var addon = this._ExtensionManager.getInstallLocation(aId);
 			if (!addon) return null;
-			var dir = addon.location.clone();
-			dir.append(aId);
-			return dir;
+			return addon.getItemFile(aId, '').clone();
 		},
 		_getInstalledLocation_AM : function(aId)
 		{
