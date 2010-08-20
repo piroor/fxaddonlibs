@@ -5,13 +5,13 @@ var log;
 
 var win;
 function windowSetUp() {
-	yield Do(utils.setUpTestWindow());
+	utils.setUpTestWindow();
 	win = utils.getTestWindow();
 	eventListenersSetUp(win, 'window');
 };
 function windowTearDown() {
 	eventListenersTearDown(win, 'window');
-	yield Do(utils.tearDownTestWindow());
+	utils.tearDownTestWindow();
 	win = null;
 }
 
