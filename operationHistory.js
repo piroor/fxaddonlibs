@@ -77,7 +77,7 @@
    http://www.cozmixng.org/repos/piro/fx3-compatibility-lib/trunk/operationHistory.test.js
 */
 (function() {
-	const currentRevision = 63;
+	const currentRevision = 64;
 
 	if (!('piro.sakura.ne.jp' in window)) window['piro.sakura.ne.jp'] = {};
 
@@ -1394,6 +1394,7 @@
 
 			var metaData = new UIHistoryMetaData();
 			metaData.names.push(aEntry.name);
+			metaData.dateTime = Date.now();
 
 			this.metaData = this.metaData.slice(0, this.index+1);
 			this.metaData.push(metaData);
@@ -1558,16 +1559,7 @@
 		{
 			this.children = [];
 			this.names    = [];
-			this.insertionTargets = {};
-		},
-
-		registerInsertionTarget : function(aEntry, aNames)
-		{
-			aNames.forEach(function(aName) {
-				if (!this.insertionTargets[aName])
-					this.insertionTargets[aName] = [];
-				this.insertionTargets[aName].push(aEntry);
-			}, this);
+			this.dateTime = -1;
 		}
 	};
 
