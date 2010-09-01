@@ -208,12 +208,14 @@ if (typeof window == 'undefined' ||
 				if (aEvent && aTask.window != aEvent.target.defaultView)
 					return true;
 				try {
-					return !aTask.task(
-						now - aTask.start,
-						aTask.beginning,
-						aTask.change,
-						aTask.duration
-					);
+					var time = Math.min(aTask.duration, now - aTask.start);
+					var finished = aTask.task(
+							time,
+							aTask.beginning,
+							aTask.change,
+							aTask.duration
+						);
+					return !finished && (time < aTask.duration);
 				}
 				catch(e) {
 				}
