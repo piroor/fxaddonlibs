@@ -25,7 +25,8 @@ var EXPORTED_SYMBOLS = [
 		'setTimeout',
 		'clearTimeout',
 		'setInterval',
-		'clearInterval'
+		'clearInterval',
+		'clearAllTimers'
 	];
 
 function setTimeout()
@@ -72,6 +73,12 @@ function setInterval()
 function clearInterval(aId)
 {
 	Timer.cancel(aId);
+}
+
+
+function clearAllTimers()
+{
+	Timer.cancelAll();
 }
 
 
@@ -133,6 +140,15 @@ Timer.cancel = function(aId) {
 	var timer = this.getInstanceById(aId);
 	if (timer)
 		timer.cancel();
+};
+Timer.cancelAll = function(aId) {
+	for (var i in this.instances)
+	{
+		let timer = this.instances[i];
+		if (timer)
+			timer.cancel();
+	}
+	this.instances = {};
 };
 Timer.getInstanceById = function(aId) {
 	return this.instances[aId] || null ;
