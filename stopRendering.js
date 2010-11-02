@@ -7,9 +7,9 @@
    window['piro.sakura.ne.jp'].stopRendering.start();
 
  license: The MIT License, Copyright (c) 2009-2010 SHIMODA "Piro" Hiroshi
-   http://www.cozmixng.org/repos/piro/fx3-compatibility-lib/trunk/license.txt
+   http://github.com/piroor/fxaddonlibs/blob/master/license.txt
  original:
-   http://www.cozmixng.org/repos/piro/fx3-compatibility-lib/trunk/stopRendering.js
+   http://github.com/piroor/fxaddonlibs/blob/master/stopRendering.js
 */
 (function() {
 	const currentRevision = 8;

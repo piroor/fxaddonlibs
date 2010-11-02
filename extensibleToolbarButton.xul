@@ -6,11 +6,11 @@
    <?xul-overlay href="extensibleToolbarButton.xul"?>
 
  license: The MIT License, Copyright (c) 2009 SHIMODA "Piro" Hiroshi
-   http://www.cozmixng.org/repos/piro/fx3-compatibility-lib/trunk/license.txt
+   http://github.com/piroor/fxaddonlibs/blob/master/license.txt
  original:
-   http://www.cozmixng.org/repos/piro/fx3-compatibility-lib/trunk/extensibleToolbarButton.xul
-   http://www.cozmixng.org/repos/piro/fx3-compatibility-lib/trunk/extensibleToolbarButton.xml
-   http://www.cozmixng.org/repos/piro/fx3-compatibility-lib/trunk/extensibleToolbarButton.css
+   http://github.com/piroor/fxaddonlibs/blob/master/extensibleToolbarButton.xul
+   http://github.com/piroor/fxaddonlibs/blob/master/extensibleToolbarButton.xml
+   http://github.com/piroor/fxaddonlibs/blob/master/extensibleToolbarButton.css
 -->
 <?xml-stylesheet href="extensibleToolbarButton.css" type="text/css"?>
 <overlay xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">

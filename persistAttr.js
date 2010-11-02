@@ -9,9 +9,9 @@
                               .removePersistentAttribute(elem, 'width');
 
  license: The MIT License, Copyright (c) 2010 SHIMODA "Piro" Hiroshi
-   http://www.cozmixng.org/repos/piro/fx3-compatibility-lib/trunk/license.txt
+   http://github.com/piroor/fxaddonlibs/blob/master/license.txt
  original:
-   http://www.cozmixng.org/repos/piro/fx3-compatibility-lib/trunk/persistAttr.js
+   http://github.com/piroor/fxaddonlibs/blob/master/persistAttr.js
 */
 
 /* To work as a JS Code Module */
@@ -20,7 +20,7 @@ if (typeof window == 'undefined' ||
 	this.EXPORTED_SYMBOLS = ['persistAttr'];
 
 	// If namespace.jsm is available, export symbols to the shared namespace.
-	// See: http://www.cozmixng.org/repos/piro/fx3-compatibility-lib/trunk/namespace.jsm
+	// See: http://github.com/piroor/fxaddonlibs/blob/master/namespace.jsm
 	try {
 		let ns = {};
 		Components.utils.import('resource://my-modules/namespace.jsm', ns);

@@ -20,19 +20,19 @@
    window['piro.sakura.ne.jp'].animationManager.start();
 
  license: The MIT License, Copyright (c) 2009-2010 SHIMODA "Piro" Hiroshi
-   http://www.cozmixng.org/repos/piro/fx3-compatibility-lib/trunk/license.txt
+   http://github.com/piroor/fxaddonlibs/blob/master/license.txt
  original:
-   http://www.cozmixng.org/repos/piro/fx3-compatibility-lib/trunk/animationManager.js
+   http://github.com/piroor/fxaddonlibs/blob/master/animationManager.js
 */
 
 /* To work as a JS Code Module (*require jstimer.jsm)
-   http://www.cozmixng.org/repos/piro/fx3-compatibility-lib/trunk/jstimer.jsm */
+   http://github.com/piroor/fxaddonlibs/blob/master/jstimer.jsm */
 if (typeof window == 'undefined' ||
 	(window && typeof window.constructor == 'function')) {
 	this.EXPORTED_SYMBOLS = ['animationManager'];
 
 	// If namespace.jsm is available, export symbols to the shared namespace.
-	// See: http://www.cozmixng.org/repos/piro/fx3-compatibility-lib/trunk/namespace.jsm
+	// See: http://github.com/piroor/fxaddonlibs/blob/master/namespace.jsm
 	let ns = {};
 	try {
 		Components.utils.import('resource://my-modules/namespace.jsm', ns);

@@ -71,10 +71,10 @@
    });
 
  license: The MIT License, Copyright (c) 2009-2010 SHIMODA "Piro" Hiroshi
-   http://www.cozmixng.org/repos/piro/fx3-compatibility-lib/trunk/license.txt
+   http://github.com/piroor/fxaddonlibs/blob/master/license.txt
  original:
-   http://www.cozmixng.org/repos/piro/fx3-compatibility-lib/trunk/operationHistory.js
-   http://www.cozmixng.org/repos/piro/fx3-compatibility-lib/trunk/operationHistory.test.js
+   http://github.com/piroor/fxaddonlibs/blob/master/operationHistory.js
+   http://github.com/piroor/fxaddonlibs/blob/master/operationHistory.test.js
 */
 (function() {
 	const currentRevision = 64;

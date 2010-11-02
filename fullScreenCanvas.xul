@@ -6,7 +6,7 @@
  This library is obsolete. You don't have to use this even
  if you want to do heavy operations without refreshing.
  You should use stopRendering.js instead of this.
- http://www.cozmixng.org/repos/piro/fx3-compatibility-lib/trunk/stopRendering.js
+ http://github.com/piroor/fxaddonlibs/blob/master/stopRendering.js
  ************************************************************
 
  Usage:
@@ -15,9 +15,9 @@
    window.fullScreenCanvas.hide();
 
  license: The MIT License, Copyright (c) 2009-2010 SHIMODA "Piro" Hiroshi
-   http://www.cozmixng.org/repos/piro/fx3-compatibility-lib/trunk/license.txt
+   http://github.com/piroor/fxaddonlibs/blob/master/license.txt
  original:
-   http://www.cozmixng.org/repos/piro/fx3-compatibility-lib/trunk/fullScreenCanvas.xul
+   http://github.com/piroor/fxaddonlibs/blob/master/fullScreenCanvas.xul
 -->
 <overlay xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
 <script type="application/javascript"><![CDATA[
