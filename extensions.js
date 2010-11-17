@@ -44,7 +44,7 @@ if (typeof window == 'undefined' ||
 }
 
 (function() {
-	const currentRevision = 11;
+	const currentRevision = 12;
 
 	if (!('piro.sakura.ne.jp' in window)) window['piro.sakura.ne.jp'] = {};
 
@@ -320,7 +320,7 @@ if (typeof window == 'undefined' ||
 			while (windows.hasMoreElements())
 			{
 				let win = windows.getNext();
-				if (win.location.href == uri) {
+				if (win.location.href == aURI) {
 					win.focus();
 					return;
 				}
