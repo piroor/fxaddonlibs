@@ -332,7 +332,7 @@ if (typeof window == 'undefined' ||
 			catch(e) {
 			}
 			(aOwnerWindow || window).openDialog(
-				uri,
+				aURI,
 				'',
 				'chrome,titlebar,toolbar,centerscreen,' + (instantApply ? 'dialog=no' : 'modal' )
 			);
