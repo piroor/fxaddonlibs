@@ -6,11 +6,11 @@
    <?xul-overlay href="tabFx2Compatible.xul"?>
 
  license: The MIT License, Copyright (c) 2009-2010 SHIMODA "Piro" Hiroshi
-   http://github.com/piroor/fxaddonlibs/blob/master/license.txt
+   http://www.cozmixng.org/repos/piro/fx3-compatibility-lib/trunk/license.txt
  original:
-   http://github.com/piroor/fxaddonlibs/blob/master/tabFx2Compatible.xul
-   http://github.com/piroor/fxaddonlibs/blob/master/tabFx2Compatible.xml
-   http://github.com/piroor/fxaddonlibs/blob/master/tabFx2Compatible.css
+   http://www.cozmixng.org/repos/piro/fx3-compatibility-lib/trunk/tabFx2Compatible.xul
+   http://www.cozmixng.org/repos/piro/fx3-compatibility-lib/trunk/tabFx2Compatible.xml
+   http://www.cozmixng.org/repos/piro/fx3-compatibility-lib/trunk/tabFx2Compatible.css
 -->
 <?xml-stylesheet href="tabFx2Compatible.css" type="text/css"?>
 <overlay xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
@@ -19,7 +19,7 @@
 window.addEventListener('DOMContentLoaded', function() {
 	window.removeEventListener('DOMContentLoaded', arguments.callee, true);
 
-	const currentRevision = 11;
+	const currentRevision = 12;
 
 	var b = document.getElementById('content');
 	if (!b || b.localName != 'tabbrowser') return;
