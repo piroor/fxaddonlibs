@@ -54,7 +54,7 @@ if (typeof namespace == 'undefined') {
 	// See: http://github.com/piroor/fxaddonlibs/blob/master/namespace.jsm
 	try {
 		let ns = {};
-		Components.utils.import('resource://system-monitor-modules/lib/namespace.jsm', ns);
+		Components.utils.import('resource://my-modules/namespace.jsm', ns);
 		namespace = ns.getNamespaceFor('piro.sakura.ne.jp');
 	}
 	catch(e) {
@@ -65,7 +65,7 @@ if (typeof namespace == 'undefined') {
 // This depends on JSDeferred.
 // See: https://github.com/cho45/jsdeferred
 if (typeof namespace.Deferred == 'undefined')
-	Components.utils.import('resource://system-monitor-modules/lib/jsdeferred.js', namespace);
+	Components.utils.import('resource://my-modules/jsdeferred.js', namespace);
 
 var available = false;
 try {
