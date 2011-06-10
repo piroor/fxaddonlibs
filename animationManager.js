@@ -19,7 +19,7 @@
    // restart after doing something
    window['piro.sakura.ne.jp'].animationManager.start();
 
- license: The MIT License, Copyright (c) 2009-2010 SHIMODA "Piro" Hiroshi
+ license: The MIT License, Copyright (c) 2009-2011 SHIMODA "Piro" Hiroshi
    http://github.com/piroor/fxaddonlibs/blob/master/license.txt
  original:
    http://github.com/piroor/fxaddonlibs/blob/master/animationManager.js
@@ -46,7 +46,7 @@ if (typeof window == 'undefined' ||
 }
 
 (function() {
-	const currentRevision = 7;
+	const currentRevision = 8;
 
 	if (!('piro.sakura.ne.jp' in window)) window['piro.sakura.ne.jp'] = {};
 
@@ -132,6 +132,9 @@ if (typeof window == 'undefined' ||
 					if (this._listeningWindows.indexOf(aWindow) < 0) {
 						aWindow.addEventListener('MozBeforePaint', this, false);
 						this._listeningWindows.push(aWindow);
+						this._listeningWindowSafetyTimers.push(window.setTimeout(function(aSelf) {
+							aSelf.handleEvent(aWindow);
+						}, 100, this));
 					}
 					aWindow.mozRequestAnimationFrame();
 				}, this);
@@ -145,10 +148,12 @@ if (typeof window == 'undefined' ||
 				this.timer = null;
 			}
 			if (this._listeningWindows.length) { // Firefox 4-
-				this._listeningWindows.forEach(function(aWindow) {
+				this._listeningWindows.forEach(function(aWindow, aIndex) {
 					aWindow.removeEventListener('MozBeforePaint', this, false);
+					window.clearTimeout(this._listeningWindowSafetyTimers[aIndex]);
 				}, this);
 				this._listeningWindows = [];
+				this._listeningWindowSafetyTimers = [];
 			}
 		},
 
@@ -166,6 +171,7 @@ if (typeof window == 'undefined' ||
 		// Firefox 4 animation frame API
 		_windows : windows,
 		_listeningWindows : [],
+		_listeningWindowSafetyTimers : [],
 
 		_isAnimationFrameAvailable : function(aWindow)
 		{
@@ -181,7 +187,11 @@ if (typeof window == 'undefined' ||
 					return true;
 				let index = this._listeningWindows.indexOf(aWindow);
 				if (index > -1) {
+					let timer = this._listeningWindowSafetyTimers[index];
+					if (timer)
+						window.clearTimeout(timer);
 					this._listeningWindows.splice(index, 1);
+					this._listeningWindowSafetyTimers.splice(index, 1);
 					aWindow.removeEventListener('MozBeforePaint', this, false);
 				}
 				return false;
@@ -190,10 +200,18 @@ if (typeof window == 'undefined' ||
 
 		handleEvent : function(aEvent)
 		{
+			var w = aEvent && aEvent instanceof Ci.nsIDOMEvent ? aEvent.target.defaultView : aEvent ;
+			var index = this._listeningWindows.indexOf(w);
+			if (index > -1) {
+				let timer = this._listeningWindowSafetyTimers[index];
+				if (timer) window.clearTimeout(timer);
+				this._listeningWindowSafetyTimers[index] = null;
+				aEvent = null;
+			}
 			this.onAnimation(this, aEvent);
 			this._cleanUpWindows();
-			if (this._listeningWindows.indexOf(aEvent.target.defaultView) > -1)
-				aEvent.target.defaultView.mozRequestAnimationFrame();
+			if (index > -1)
+				w.mozRequestAnimationFrame();
 		},
 
 		onAnimation : function(aSelf, aEvent) 
