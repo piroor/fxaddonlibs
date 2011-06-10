@@ -134,7 +134,7 @@ if (typeof window == 'undefined' ||
 						this._listeningWindows.push(aWindow);
 						this._listeningWindowSafetyTimers.push(window.setTimeout(function(aSelf) {
 							aSelf.handleEvent(aWindow);
-						}, 100, this));
+						}, 1000, this));
 					}
 					aWindow.mozRequestAnimationFrame();
 				}, this);
