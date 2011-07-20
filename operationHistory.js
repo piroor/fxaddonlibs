@@ -70,7 +70,7 @@
        item.setAttribute('checked', true);
    });
 
- license: The MIT License, Copyright (c) 2009-2010 SHIMODA "Piro" Hiroshi
+ license: The MIT License, Copyright (c) 2009-2011 SHIMODA "Piro" Hiroshi
    http://github.com/piroor/fxaddonlibs/blob/master/license.txt
  original:
    http://github.com/piroor/fxaddonlibs/blob/master/operationHistory.js
@@ -765,7 +765,9 @@
 			var targets = WindowMediator.getEnumerator(null);
 			while (targets.hasMoreElements())
 			{
-				let target = targets.getNext().QueryInterface(Ci.nsIDOMWindowInternal);
+				let target = targets.getNext().QueryInterface(Ci.nsIDOMWindow);
+				if ('nsIDOMWindowInternal' in Ci) // for Firefox 7 or olders
+					target = target.QueryInterface(Ci.nsIDOMWindowInternal);
 				if (aId == this.getWindowId(target))
 					return target;
 			}
@@ -893,6 +895,7 @@
 			if (!ids.length)
 				throw new Error('target id must be specified.');
 
+
 			return ids.map(function(aId) {
 					return this.getTargetById.apply(this, [aId].concat(otherArgs));
 				}, this);
@@ -936,7 +939,9 @@
 			var targets = WindowMediator.getEnumerator(null);
 			while (targets.hasMoreElements())
 			{
-				let target = targets.getNext().QueryInterface(Ci.nsIDOMWindowInternal);
+				let target = targets.getNext().QueryInterface(Ci.nsIDOMWindow);
+				if ('nsIDOMWindowInternal' in Ci) // for Firefox 7 or olders
+					target = target.QueryInterface(Ci.nsIDOMWindowInternal);
 				if (
 					'piro.sakura.ne.jp' in target &&
 					'operationHistory' in target['piro.sakura.ne.jp'] &&
@@ -1214,7 +1219,9 @@
 			var windows = [];
 			while (targets.hasMoreElements())
 			{
-				let target = targets.getNext().QueryInterface(Ci.nsIDOMWindowInternal);
+				let target = targets.getNext().QueryInterface(Ci.nsIDOMWindow);
+				if ('nsIDOMWindowInternal' in Ci) // for Firefox 7 or olders
+					target = target.QueryInterface(Ci.nsIDOMWindowInternal);
 				let id = target.document.documentElement.getAttribute(this.WINDOW_ID);
 				try {
 					if (!id)
