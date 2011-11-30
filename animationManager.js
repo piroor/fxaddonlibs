@@ -35,14 +35,14 @@ if (typeof window == 'undefined' ||
 	// See: http://github.com/piroor/fxaddonlibs/blob/master/namespace.jsm
 	let ns = {};
 	try {
-		Components.utils.import('resource://my-modules/lib/namespace.jsm', ns);
+		Components.utils.import('resource://my-modules/namespace.jsm', ns);
 		/* var */ window = ns.getNamespaceFor('piro.sakura.ne.jp');
 	}
 	catch(e) {
 		window = {};
 	}
 	if (!('setInterval' in window))
-		Components.utils.import('resource://my-modules/lib/jstimer.jsm', window);
+		Components.utils.import('resource://my-modules/jstimer.jsm', window);
 }
 
 (function() {
