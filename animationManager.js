@@ -35,18 +35,18 @@ if (typeof window == 'undefined' ||
 	// See: http://github.com/piroor/fxaddonlibs/blob/master/namespace.jsm
 	let ns = {};
 	try {
-		Components.utils.import('resource://my-modules/namespace.jsm', ns);
+		Components.utils.import('resource://my-modules/lib/namespace.jsm', ns);
 		/* var */ window = ns.getNamespaceFor('piro.sakura.ne.jp');
 	}
 	catch(e) {
 		window = {};
 	}
 	if (!('setInterval' in window))
-		Components.utils.import('resource://my-modules/jstimer.jsm', window);
+		Components.utils.import('resource://my-modules/lib/jstimer.jsm', window);
 }
 
 (function() {
-	const currentRevision = 8;
+	const currentRevision = 9;
 
 	if (!('piro.sakura.ne.jp' in window)) window['piro.sakura.ne.jp'] = {};
 
@@ -136,7 +136,8 @@ if (typeof window == 'undefined' ||
 							aSelf.handleEvent(aWindow);
 						}, 1000, this));
 					}
-					aWindow.mozRequestAnimationFrame();
+					// I don't know why, but Firefox 11 requires the callback anyway!!
+					aWindow.mozRequestAnimationFrame(function() {});
 				}, this);
 			}
 		},
@@ -210,8 +211,10 @@ if (typeof window == 'undefined' ||
 			}
 			this.onAnimation(this, aEvent);
 			this._cleanUpWindows();
-			if (index > -1)
-				w.mozRequestAnimationFrame();
+			if (index > -1) {
+				// I don't know why, but Firefox 11 requires the callback anyway!!
+				w.mozRequestAnimationFrame(function() {});
+			}
 		},
 
 		onAnimation : function(aSelf, aEvent) 
