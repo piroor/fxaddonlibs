@@ -21,7 +21,7 @@
  *       // dismissed (boolean)
  *       // eventCallback (function)
  *       // neverShow (boolean)
- *       // popupIconURL (string) : will be used instead of "image" option, if "image" is not given.
+ *       // popupIconURL (string) : will be used instead of "image" option.
  *     }
  *   })
  *   .next(function(aButtonIndex) {
