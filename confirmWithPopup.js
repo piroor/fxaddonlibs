@@ -88,7 +88,7 @@ var confirmWithPopup;
 	}
 
 	if (!available)
-		return confirmWithPopup = unavailable;
+		return confirmWithPopup = undefined;
 
 	const DEFAULT_ANCHOR_ICON = 'default-notification-icon';
 
