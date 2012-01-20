@@ -1,7 +1,7 @@
 /**
  * @fileOverview Tab Related Confirmation Library for Firefox 3.5 or later
  * @author       SHIMODA "Piro" Hiroshi
- * @version      7
+ * @version      8
  * Basic usage:
  *
  * @example
@@ -65,14 +65,18 @@ if (typeof namespace == 'undefined') {
 	}
 }
 
-// This depends on JSDeferred.
+// This can be extended by JSDeferred.
 // See: https://github.com/cho45/jsdeferred
-if (typeof namespace.Deferred == 'undefined')
-	Components.utils.import('resource://my-modules/jsdeferred.js', namespace);
+try {
+	if (typeof namespace.Deferred == 'undefined')
+		Components.utils.import('resource://my-modules/jsdeferred.js', namespace);
+}
+catch(e) {
+}
 
 var confirmWithTab;
 (function() {
-	const currentRevision = 7;
+	const currentRevision = 8;
 
 	var loadedRevision = 'confirmWithTab' in namespace ?
 			namespace.confirmWithTab.revision :
@@ -82,42 +86,69 @@ var confirmWithTab;
 		return;
 	}
 
+	const Cc = Components.classes;
 	const Ci = Components.interfaces;
+
+	function next(aCallback) {
+		Cc['@mozilla.org/timer;1']
+			.createInstance(Ci.nsITimer)
+			.init(aCallback, 0, Ci.nsITimer.TYPE_ONE_SHOT);
+	}
+
+	function normalizeOptions(aOptions) {
+		// we should accept single button type popup
+		if (!aOptions.buttons && aOptions.button)
+			aOptions.buttons = [aOptions.button];
+		return aOptions;
+	}
 
 	confirmWithTab = function confirmWithTab(aOptions) 
 	{
-		var deferred = new namespace.Deferred();
-		if (!aOptions.buttons) {
+		var options = normalizeOptions(aOptions);
+		var deferred = namespace.Deferred ?
+						new namespace.Deferred() :
+						{ // fake deferred
+							next : next,
+							call : function(aValue) { options.callback && options.callback.call(aOptions, aValue); },
+							fail : function(aError) { options.onerror && options.onerror.call(aOptions, aError); }
+						};
+
+		if (!options.buttons) {
 			return deferred
 					.next(function() {
-						throw new Error('confirmWithTab requires one or more buttons!');
+						throw new Error('confirmWithTab requires any button!');
 					});
 		}
 
-		var buttonClicked = false;
+		var done = false;
 		var checkbox;
-		namespace.Deferred.next(function() {
-			aOptions.cancelEvents = (aOptions.cancelEvents || [])
+		var postProcess = function () {
+			done = true;
+			if (options.checkbox)
+				options.checkbox.checked = checkbox.checked;
+		};
+		var showBar = function() {
+			options.cancelEvents = (options.cancelEvents || [])
 										.concat(['TabClose'])
 										.sort()
 										.join('\n')
 										.replace(/^(.+)$\n(\1\n)+/gm, '$1\n')
 										.split('\n');
 
-			var tab = aOptions.tab;
+			var tab = options.tab;
 			var b = getTabBrowserFromChild(tab);
 			var box = b.getNotificationBox(tab.linkedBrowser);
 			var accessKeys = [];
 			var numericAccessKey = 0;
 			var notification = box.appendNotification(
-					aOptions.label,
-					aOptions.value || 'confirmWithTab-'+encodeURIComponent(aOptions.label),
-					aOptions.image || null,
-					(aOptions.priority ?
-						(typeof aOptions.priority == 'number' ? aOptions.priority : box[aOptions.priority] ) :
+					options.label,
+					options.value || 'confirmWithTab-'+encodeURIComponent(options.label),
+					options.image || null,
+					(options.priority ?
+						(typeof options.priority == 'number' ? options.priority : box[options.priority] ) :
 						box.PRIORITY_INFO_MEDIUM
 					),
-					aOptions.buttons.map(function(aLabel, aIndex) {
+					options.buttons.map(function(aLabel, aIndex) {
 						var accessKey;
 						var match = aLabel.match(/\s*\(&([0-9a-z])\)/i);
 						if (match) {
@@ -157,17 +188,22 @@ var confirmWithTab;
 							label     : aLabel,
 							accessKey : accessKey,
 							callback  : function() {
-								buttonClicked = true;
-								deferred.call(aIndex);
+								done = true;
+								try {
+									deferred.call(aIndex);
+								}
+								finally {
+									postProcess();
+								}
 							}
 						};
 					})
 				);
 
-			if (aOptions.checkbox) {
+			if (options.checkbox) {
 				checkbox = notification.ownerDocument.createElement('checkbox');
-				checkbox.setAttribute('label', aOptions.checkbox.label);
-				if (aOptions.checkbox.checked)
+				checkbox.setAttribute('label', options.checkbox.label);
+				if (options.checkbox.checked)
 					checkbox.setAttribute('checked', 'true');
 
 				let container = notification.ownerDocument.createElement('hbox');
@@ -177,38 +213,62 @@ var confirmWithTab;
 				notification.appendChild(container);
 			}
 
-			if (aOptions.persistence)
-				notification.persistence = aOptions.persistence;
+			if (options.persistence)
+				notification.persistence = options.persistence;
 
 			var strip = b.tabContainer || b.mTabContainer;
 			var handleEvent = function handleEvent(aEvent) {
 					if (aEvent.type == 'DOMNodeRemoved' && aEvent.target != notification)
 						return;
-					if (aOptions.cancelEvents)
-						aOptions.cancelEvents.forEach(function(aEventType) {
+					if (options.cancelEvents)
+						options.cancelEvents.forEach(function(aEventType) {
 							strip.removeEventListener(aEventType, handleEvent, false);
 						});
 					if (notification.parentNode)
 						notification.parentNode.removeEventListener('DOMNodeRemoved', handleEvent, false);
-					if (aEvent.type != 'DOMNodeRemoved')
-						notification.close();
-					if (!buttonClicked)
-						deferred.fail(aEvent);
+					try {
+						if (aEvent.type != 'DOMNodeRemoved')
+							notification.close();
+						if (!done)
+							deferred.fail(aEvent);
+					}
+					finally {
+						postProcess();
+					}
 				};
-			if (aOptions.cancelEvents)
-				aOptions.cancelEvents.forEach(function(aEventType) {
+			if (options.cancelEvents)
+				options.cancelEvents.forEach(function(aEventType) {
 					strip.addEventListener(aEventType, handleEvent, false);
 				});
 			notification.parentNode.addEventListener('DOMNodeRemoved', handleEvent, false);
-		});
+		};
 
-		return deferred
-				.next(function(aButtonIndex) {
-					buttonClicked = true;
-					if (aOptions.checkbox)
-						aOptions.checkbox.checked = checkbox.checked;
-					return aButtonIndex;
-				});
+		if (namespace.Deferred) {
+			namespace.Deferred.next(showBar);
+			return deferred;
+		}
+		else {
+			next(showBar);
+
+			let originalCall = deferred.call;
+			deferred.call = function(aButtonIndex) {
+				try {
+					originalCall(aButtonIndex);
+				}
+				finally {
+					postProcess();
+				}
+			};
+			let originalFail = deferred.fail;
+			deferred.fail = function(aError) {
+				try {
+					originalFail(aError);
+				}
+				finally {
+					postProcess();
+				}
+			};
+		}
 	};
 
 	function getTabBrowserFromChild(aTabBrowserChild)
