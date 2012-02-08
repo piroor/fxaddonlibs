@@ -157,7 +157,7 @@ var confirmWithTab;
 							accessKey = match[2];
 						}
 						else if (match = aLabel.match(/^\s*(.*[^&])?\&(([^&]).*$)/)) {
-							aLabel = (match[1] + match[2]).replace(/\&\&/g, '&');
+							aLabel = ((match[1] || '') + match[2]).replace(/\&\&/g, '&');
 							accessKey = match[3];
 						}
 						else {
