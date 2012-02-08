@@ -1,7 +1,7 @@
 /**
  * @fileOverview Tab Related Confirmation Library for Firefox 3.5 or later
  * @author       SHIMODA "Piro" Hiroshi
- * @version      8
+ * @version      9
  * Basic usage:
  *
  * @example
@@ -76,7 +76,7 @@ catch(e) {
 
 var confirmWithTab;
 (function() {
-	const currentRevision = 8;
+	const currentRevision = 9;
 
 	var loadedRevision = 'confirmWithTab' in namespace ?
 			namespace.confirmWithTab.revision :
@@ -149,11 +149,16 @@ var confirmWithTab;
 						box.PRIORITY_INFO_MEDIUM
 					),
 					options.buttons.map(function(aLabel, aIndex) {
+						// see resource://gre/modules/CommonDialog.jsm
 						var accessKey;
-						var match = aLabel.match(/\s*\(&([0-9a-z])\)/i);
-						if (match) {
-							accessKey = match[1];
-							aLabel = aLabel.replace(match[0], '');
+						var match;
+						if (match = aLabel.match(/^\s*(.*?)\s*\(\&([^&])\)(:)?$/)) {
+							aLabel = (match[1] + (match[3] || '')).replace(/\&\&/g, '&');
+							accessKey = match[2];
+						}
+						else if (match = aLabel.match(/^\s*(.*[^&])?\&(([^&]).*$)/)) {
+							aLabel = (match[1] + match[2]).replace(/\&\&/g, '&');
+							accessKey = match[3];
 						}
 						else {
 							let lastUniqueKey;
@@ -161,15 +166,8 @@ var confirmWithTab;
 							for (let i = 0, maxi = aLabel.length; i < maxi; i++)
 							{
 								let possibleAccessKey = aLabel.charAt(i);
-								if (possibleAccessKey == '&' && i < maxi-1) {
-									possibleAccessKey = aLabel.charAt(i+1);
-									if (possibleAccessKey != '&') {
-										accessKey = possibleAccessKey;
-									}
-									i++;
-								}
-								else if (!lastUniqueKey &&
-										accessKeys.indexOf(possibleAccessKey) < 0) {
+								if (!lastUniqueKey &&
+									accessKeys.indexOf(possibleAccessKey) < 0) {
 									lastUniqueKey = possibleAccessKey;
 								}
 								sanitizedLabel.push(possibleAccessKey);
@@ -179,7 +177,7 @@ var confirmWithTab;
 							if (!accessKey || !/[0-9a-z]/i.test(accessKey))
 								accessKey = ++numericAccessKey;
 
-							aLabel = sanitizedLabel.join('');
+							aLabel = sanitizedLabel.join('').replace(/\&\&/g, '&');
 						}
 
 						accessKeys.push(accessKey);

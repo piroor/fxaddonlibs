@@ -19,7 +19,7 @@
    // restart after doing something
    window['piro.sakura.ne.jp'].animationManager.start();
 
- license: The MIT License, Copyright (c) 2009-2011 SHIMODA "Piro" Hiroshi
+ license: The MIT License, Copyright (c) 2009-2012 SHIMODA "Piro" Hiroshi
    http://github.com/piroor/fxaddonlibs/blob/master/license.txt
  original:
    http://github.com/piroor/fxaddonlibs/blob/master/animationManager.js
@@ -245,6 +245,7 @@ if (typeof window == 'undefined' ||
 					return !finished && (time < aTask.duration);
 				}
 				catch(e) {
+					dump(e+'\n'+e.stack+'\n');
 				}
 				return false;
 			});
