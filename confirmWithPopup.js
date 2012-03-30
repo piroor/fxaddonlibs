@@ -1,7 +1,7 @@
 /**
  * @fileOverview Popup Notification (Door Hanger) Based Confirmation Library for Firefox 4.0 or later
  * @author       SHIMODA "Piro" Hiroshi
- * @version      4
+ * @version      5
  * Basic usage:
  *
  * @example
@@ -90,8 +90,8 @@ catch(e) {
 }
 
 var confirmWithPopup;
-(function() {
-	const currentRevision = 4;
+(function(global) {
+	const currentRevision = 5;
 
 	var loadedRevision = 'confirmWithPopup' in namespace ?
 			namespace.confirmWithPopup.revision :
@@ -102,7 +102,7 @@ var confirmWithPopup;
 	}
 
 	if (!available)
-		return confirmWithPopup = undefined;
+		return global.confirmWithPopup = undefined;
 
 	const Cc = Components.classes;
 	const Ci = Components.interfaces;
@@ -195,17 +195,24 @@ var confirmWithPopup;
 					});
 		}
 
-		if (!options.browser)
+		var b = options.browser;
+		if (!b && options.window)
+			b = options.window.gBrowser;
+
+		if (!b)
 			return deferred
 					.next(function() {
 						throw new Error('confirmWithPopup requires a <xul:browser/>!');
 					});
 
-		var doc = options.browser.ownerDocument;
+		if (b.localName == 'tabbrowser')
+			b = b.selectedBrowser;
+
+		var doc = b.ownerDocument;
 		var style;
 		var done = false;
 		var postProcess = function() {
-				if (doc && style) {
+				if (doc && style && style.parentNode) {
 					doc.removeChild(style);
 					style = null;
 				}
@@ -276,7 +283,7 @@ var confirmWithPopup;
 				 *          by PopupNotifications.show().
 				 */
 				doc.defaultView.PopupNotifications.show(
-					options.browser,
+					b,
 					options.id,
 					options.label,
 					options.anchor,
@@ -293,7 +300,7 @@ var confirmWithPopup;
 					 */
 					let secondTry = function() {
 						doc.defaultView.PopupNotifications.show(
-							options.browser,
+							b,
 							options.id,
 							options.label,
 							options.anchor,
@@ -370,6 +377,10 @@ var confirmWithPopup;
 			};
 		}
 	};
+	confirmWithPopup.version = currentRevision;
 
-	namespace.confirmWithPopup = confirmWithPopup;
-})();
+	global.confirmWithPopup = namespace.confirmWithPopup = confirmWithPopup;
+})(this);
+
+if (typeof exports == 'object')
+	exports.confirmWithPopup = confirmWithPopup;
