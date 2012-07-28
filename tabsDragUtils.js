@@ -7,7 +7,7 @@
    // in dragstart event listener
    window['piro.sakura.ne.jp'].tabsDragUtils.startTabsDrag(aEvent, aArrayOfTabs);
 
- license: The MIT License, Copyright (c) 2010-2012 SHIMODA "Piro" Hiroshi
+ license: The MIT License, Copyright (c) 2010-2012 YUKI "Piro" Hiroshi
    http://github.com/piroor/fxaddonlibs/blob/master/license.txt
  original:
    http://github.com/piroor/fxaddonlibs/blob/master/tabsDragUtils.js
