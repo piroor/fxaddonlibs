@@ -1,7 +1,7 @@
 /**
  * @fileOverview Popup Notification (Door Hanger) Based Confirmation Library for Firefox 4.0 or later
  * @author       SHIMODA "Piro" Hiroshi
- * @version      4
+ * @version      5
  * Basic usage:
  *
  * @example
@@ -90,8 +90,8 @@ catch(e) {
 }
 
 var confirmWithPopup;
-(function() {
-	const currentRevision = 4;
+(function(global) {
+	const currentRevision = 5;
 
 	var loadedRevision = 'confirmWithPopup' in namespace ?
 			namespace.confirmWithPopup.revision :
@@ -102,7 +102,7 @@ var confirmWithPopup;
 	}
 
 	if (!available)
-		return confirmWithPopup = undefined;
+		return global.confirmWithPopup = undefined;
 
 	const Cc = Components.classes;
 	const Ci = Components.interfaces;
@@ -130,7 +130,13 @@ var confirmWithPopup;
 				)+
 				'#notification-popup-box[anchorid="'+aOptions.anchor+'"] > #'+aOptions.anchor+' {'+
 				'	display: -moz-box;'+
-				'}'
+				'}' +
+				(aOptions.label.indexOf('\n') > -1 ?
+					'popupnotification[id="'+aOptions.id+'-notification"] .popup-notification-description {' +
+					'	white-space: pre-wrap;' +
+					'}' :
+					''
+				)
 			);
 
 		var styleSheets = aDocument.styleSheets;
@@ -195,17 +201,24 @@ var confirmWithPopup;
 					});
 		}
 
-		if (!options.browser)
+		var b = options.browser;
+		if (!b && options.window)
+			b = options.window.gBrowser;
+
+		if (!b)
 			return deferred
 					.next(function() {
 						throw new Error('confirmWithPopup requires a <xul:browser/>!');
 					});
 
-		var doc = options.browser.ownerDocument;
+		if (b.localName == 'tabbrowser')
+			b = b.selectedBrowser;
+
+		var doc = b.ownerDocument;
 		var style;
 		var done = false;
 		var postProcess = function() {
-				if (doc && style) {
+				if (doc && style && style.parentNode) {
 					doc.removeChild(style);
 					style = null;
 				}
@@ -222,7 +235,7 @@ var confirmWithPopup;
 						accessKey = match[2];
 					}
 					else if (match = aLabel.match(/^\s*(.*[^&])?\&(([^&]).*$)/)) {
-						aLabel = (match[1] + match[2]).replace(/\&\&/g, '&');
+						aLabel = ((match[1] || '') + match[2]).replace(/\&\&/g, '&');
 						accessKey = match[3];
 					}
 					else {
@@ -266,6 +279,7 @@ var confirmWithPopup;
 			var secondaryActions = buttons.length > 1 ? buttons.slice(1) : null ;
 
 			options.id = options.value || 'confirmWithPopup-'+encodeURIComponent(options.label);
+			options.label = options.label.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 
 			style = addStyleSheet(doc, options);
 
@@ -276,7 +290,7 @@ var confirmWithPopup;
 				 *          by PopupNotifications.show().
 				 */
 				doc.defaultView.PopupNotifications.show(
-					options.browser,
+					b,
 					options.id,
 					options.label,
 					options.anchor,
@@ -293,7 +307,7 @@ var confirmWithPopup;
 					 */
 					let secondTry = function() {
 						doc.defaultView.PopupNotifications.show(
-							options.browser,
+							b,
 							options.id,
 							options.label,
 							options.anchor,
@@ -370,6 +384,10 @@ var confirmWithPopup;
 			};
 		}
 	};
+	confirmWithPopup.version = currentRevision;
 
-	namespace.confirmWithPopup = confirmWithPopup;
-})();
+	global.confirmWithPopup = namespace.confirmWithPopup = confirmWithPopup;
+})(this);
+
+if (typeof exports == 'object')
+	exports.confirmWithPopup = confirmWithPopup;
