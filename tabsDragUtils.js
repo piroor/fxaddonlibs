@@ -377,7 +377,7 @@
 		isVertical : function TDS_isVertical(aElement)
 		{
 			let style = window.getComputedStyle(aElement, null);
-			return (style.MozOrient || style.orient) == 'vertical';
+			return (aElement.orient || style.MozOrient || style.orient) == 'vertical';
 		},
 		getClientX : function TDS_getClientX(aElement)
 		{
