@@ -390,8 +390,16 @@
 		createDragFeedbackImage : function TDU_createDragFeedbackImage(aTabs)
 		{
 			var previews = aTabs.map(function(aTab) {
-					return tabPreviews.capture(aTab, false);
-				}, this);
+					try {
+						return tabPreviews.capture(aTab, false);
+					}
+					catch(e) {
+						return null;
+					}
+				}, this)
+				.filter(function(aPreview) {
+					return aPreview;
+				});
 			var offset = 16;
 
 			var canvas = document.createElementNS('http://www.w3.org/1999/xhtml', 'canvas');
