@@ -1,6 +1,6 @@
 /**
  * @fileOverview Tab Related Confirmation Library for Firefox 3.5 or later
- * @author       SHIMODA "Piro" Hiroshi
+ * @author       YUKI "Piro" Hiroshi
  * @version      9
  * Basic usage:
  *
@@ -42,7 +42,7 @@
  *   });
  *
  * @license
- *   The MIT License, Copyright (c) 2010-2011 SHIMODA "Piro" Hiroshi
+ *   The MIT License, Copyright (c) 2010-2011 YUKI "Piro" Hiroshi
  *   http://github.com/piroor/fxaddonlibs/blob/master/license.txt
  * @url http://github.com/piroor/fxaddonlibs/blob/master/confirmWithTab.js
  * @url http://github.com/piroor/fxaddonlibs

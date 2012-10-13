@@ -13,7 +13,7 @@
                    NS1:updateKey="key"
                    NS1:name="disabled"
                    NS1:description="disabled"
-                   NS1:creator="SHIMODA Hiroshi"
+                   NS1:creator="YUKI &quot;Piro&quot; Hiroshi"
                    NS1:homepageURL="about:blank?home"
                    NS1:userDisabled="true">
     <NS1:type NC:parseType="Integer">2</NS1:type>

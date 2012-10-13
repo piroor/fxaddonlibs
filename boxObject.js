@@ -7,7 +7,7 @@
                          .boxObject
                          .getBoxObjectFor(HTMLElement);
 
- license: The MIT License, Copyright (c) 2009-2010 SHIMODA "Piro" Hiroshi
+ license: The MIT License, Copyright (c) 2009-2010 YUKI "Piro" Hiroshi
    http://github.com/piroor/fxaddonlibs/blob/master/license.txt
  original:
    http://github.com/piroor/fxaddonlibs/blob/master/boxObject.js
