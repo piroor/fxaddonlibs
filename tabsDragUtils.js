@@ -150,7 +150,6 @@
 						'}, this);'
 					).replace(
 						/(let tabWidth = [^;]+;)/,
-						'tabs = tabs.filter(function(tab) { return draggedTabs.indexOf(tab) < 0 });\n' +
 						'$1\n' +
 						'let tabCenterOffset = aCanDropOnSelf ? (tabWidth / 2) : 0 ;'
 					).replace(
@@ -173,6 +172,10 @@
 					).replace(
 						'(screenX + boxObject[size] < tabCenter)',
 						'/* $& */ (screenX + boxObject[size] - tabCenterOffset < tabLeftCenter)'
+					).replace(
+						'draggedTab._dragData.animDropIndex = newIndex',
+						'tabs = tabs.filter(function(tab) { return draggedTabs.indexOf(tab) < 0 });\n' +
+						'$&'
 					).replace(
 						'-tabWidth : tabWidth',
 						'/* $& */ -tabsWidth : tabsWidth'
@@ -245,7 +248,7 @@
 //                                            pinned ? numPinned : undefined);
 //           if (rtl)
 //             tabs.reverse();
-// tabs = tabs.filter(function(tab) { return draggedTabs.indexOf(tab) < 0 });
+// 
 //           let tabWidth = draggedTab.getBoundingClientRect()[size]/*.width*/;
 // let tabCenterOffset = aCanDropOnSelf ? (tabWidth / 2) : 0 ;
 // 
@@ -306,6 +309,7 @@
 //             newIndex++;
 //           if (newIndex < 0 || newIndex == oldIndex)
 //             return;
+// tabs = tabs.filter(function(tab) { return draggedTabs.indexOf(tab) < 0 });
 //           draggedTab._dragData.animDropIndex = newIndex;
 // 
 //           // Shift background tabs to leave a gap where the dragged tab
