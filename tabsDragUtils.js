@@ -161,7 +161,8 @@
 					).replace(
 						'draggedTab._dragData.animLastScreenX = draggedTab._dragData[position];',
 						'  $&\n' +
-						'}, this);'
+						'}, this);\n' +
+						'if (!("previousPosition" in draggedTab._dragData)) draggedTab._dragData.previousPosition = currentPosition;
 					).replace(
 						'let draggingRight = ',
 						'draggedTabs.forEach(function(draggedTab) {\n' +
@@ -173,27 +174,28 @@
 					).replace(
 						/(let tabWidth = [^;]+;)/,
 						'$1\n' +
-						'let tabCenterOffset = aOptions.canDropOnSelf ? (tabWidth / 2) : 0 ;'
+						'let tabCenterOffset = tabWidth / (aOptions.canDropOnSelf ? 3 : 2 );'
 					).replace(
 						'let tabCenter = ',
 						'draggedTabs.slice(1).forEach(function(tab) {\n' +
 						'  tab.style.transform = draggedTab.style.transform;\n' +
 						'}, this);\n' +
+						'let dontMove = false;\n' +
 						'$&'
-					).replace(
-						/(let tabCenter = )([^;]+)\/ 2;/,
-						'$1Math.round($2 / units/*2*/);\n' + // support drop on self
-						'let tabLeftCenter = tabCenter;\n' +
-						'let tabRightCenter = Math.round(tabScreenX + translateX + tabsWidth - tabWidth / units);'
 					).replace(
 						'tabs[mid] == draggedTab',
 						'/* $& */ false'
 					).replace(
-						'(screenX > tabCenter)',
-						'/* $& */ (screenX + tabCenterOffset > tabRightCenter)'
+						'newIndex = tabs[mid]._tPos;',
+						'dontMove = (aOptions.canDropOnSelf &&\n' +
+						'            ((draggedTab._dragData.previousPosition > currentPosition &&\n' +
+						'              screenX + tabCenterOffset < tabCenter) ||\n' +
+						'             (draggedTab._dragData.previousPosition < currentPosition &&\n' +
+						'              screenX + boxObject[size] - tabCenterOffset > tabCenter)));\n'
 					).replace(
-						'(screenX + boxObject[size] < tabCenter)',
-						'/* $& */ (screenX + boxObject[size] - tabCenterOffset < tabLeftCenter)'
+						'if (newIndex >= oldIndex)',
+						'draggedTab._dragData.previousPosition = currentPosition;\n' +
+						'$&'
 					).replace(
 						'draggedTab._dragData.animDropIndex = newIndex',
 						'tabs = tabs.filter(function(tab) { return draggedTabs.indexOf(tab) < 0 });\n' +
@@ -214,11 +216,11 @@
 						'  aOptions = aOptions || {};\n' +
 						'  var isVertical = "isVertical" in aOptions ? aOptions.isVertical : window["piro.sakura.ne.jp"].tabsDragUtils.isVertical(this) ;\n' +
 						'  var position = isVertical ? "screenY" : "screenX" ;\n' +
+						'  var currentPosition = event[position];\n' +
 						'  var size = isVertical ? "height" : "width" ;\n' +
 						'  var scroll = isVertical ? "scrollY" : "scrollX" ;\n' +
 						'  var translator = isVertical ? "translateY" : "translateX" ;\n' +
-						'  aOptions.canDropOnSelf = aOptions.canDropOnSelf || ("TreeStyleTabService" in window);\n' +
-						'  var units = aOptions.canDropOnSelf ? 3 : 2 ;'
+						'  aOptions.canDropOnSelf = aOptions.canDropOnSelf || ("TreeStyleTabService" in window);\n'
 					)
 				);
 				aObserver.__TabsDragUtils_updated__animateTabMove = aObserver._animateTabMove;
@@ -235,10 +237,10 @@
 // aOptions = aOptions || {};
 // var isVertical = "isVertical" in aOptions ? aOptions.isVertical : window["piro.sakura.ne.jp"].tabsDragUtils.isVertical(this) ;
 // var position = isVertical ? "screenY" : "screenX" ;
+// var currentPosition = event[position];
 // var size = isVertical ? "height" : "width" ;
 // var translator = isVertical ? "translateY" : "translateX" ;
 // aOptions.canDropOnSelf = aOptions.canDropOnSelf || ("TreeStyleTabService" in window);
-// var units = aOptions.canDropOnSelf ? 3 : 2 ;
 // 
 //           let draggedTab = event.dataTransfer.mozGetDataAt(TAB_DROP_TYPE, 0);
 // var draggedTabs = window['piro.sakura.ne.jp'].tabsDragUtils.getDraggedTabs(event);
@@ -257,6 +259,7 @@
 //           if (!("animLastScreenX" in draggedTab._dragData))
 //             draggedTab._dragData.animLastScreenX = draggedTab._dragData[position]/*.screenX*/;
 // }, this);
+// if (!("previousPosition" in draggedTab._dragData)) draggedTab._dragData.previousPosition = currentPosition;
 // 
 //           let screenX = event[position]/*.screenX*/;
 //           if (screenX == draggedTab._dragData.animLastScreenX)
@@ -277,7 +280,7 @@
 //             tabs.reverse();
 // 
 //           let tabWidth = draggedTab.getBoundingClientRect()[size]/*.width*/;
-// let tabCenterOffset = aOptions.canDropOnSelf ? (tabWidth / 2) : 0 ;
+// let tabCenterOffset = tabWidth / (aOptions.canDropOnSelf ? 3 : 2 );
 // 
 //           // Move the dragged tab based on the mouse position.
 // 
@@ -305,9 +308,8 @@
 // draggedTabs.slice(1).forEach(function(tab) {
 //   tab.style.transform = draggedTab.style.transform;
 // }, this);
-//           let tabCenter = Math.round(tabScreenX + translateX + tabWidth / units/*2*/);
-// let tabLeftCenter = tabCenter;
-// let tabRightCenter = Math.round(tabScreenX + translateX + tabsWidth - tabWidth / units);
+// let dontMove = false;
+//           let tabCenter = Math.round(tabScreenX + translateX + tabWidth / 2);
 //           let newIndex = -1;
 //           let oldIndex = "animDropIndex" in draggedTab._dragData ?
 //                          draggedTab._dragData.animDropIndex : draggedTab._tPos;
@@ -321,17 +323,21 @@
 //               break;
 //             let boxObject = tabs[mid].boxObject;
 //             let screenX = boxObject[position]/*.screenX*/ + getTabShift(tabs[mid], oldIndex);
-// //            if (screenX > tabCenter) {
-//             if (screenX + tabCenterOffset > tabRightCenter) {
+//             if (screenX > tabCenter) {
 //               high = mid - 1;
-// //            } else if (screenX + boxObject.width < tabCenter) {
-//             } else if (screenX + boxObject[size]/*.width*/ - tabCenterOffset < tabLeftCenter) {
+//             } else if (screenX + boxObject.width < tabCenter) {
 //               low = mid + 1;
 //             } else {
 //               newIndex = tabs[mid]._tPos;
+// dontMove = (aOptions.canDropOnSelf &&
+//             ((draggedTab._dragData.previousPosition > currentPosition &&
+//               screenX + tabCenterOffset < tabCenter) ||
+//              (draggedTab._dragData.previousPosition < currentPosition &&
+//               screenX + boxObject[size] - tabCenterOffset > tabCenter)));
 //               break;
 //             }
 //           }
+// draggedTab._dragData.previousPosition = currentPosition;
 //           if (newIndex >= oldIndex)
 //             newIndex++;
 //           if (newIndex < 0 || newIndex == oldIndex)
