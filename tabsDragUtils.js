@@ -162,7 +162,7 @@
 						'draggedTab._dragData.animLastScreenX = draggedTab._dragData[position];',
 						'  $&\n' +
 						'}, this);\n' +
-						'if (!("previousPosition" in draggedTab._dragData)) draggedTab._dragData.previousPosition = currentPosition;
+						'if (!("previousPosition" in draggedTab._dragData)) draggedTab._dragData.previousPosition = currentPosition;'
 					).replace(
 						'let draggingRight = ',
 						'draggedTabs.forEach(function(draggedTab) {\n' +
@@ -172,29 +172,35 @@
 						'  $&\n' +
 						'}, this);'
 					).replace(
-						/(let tabWidth = [^;]+;)/,
-						'$1\n' +
-						'let tabCenterOffset = tabWidth / (aOptions.canDropOnSelf ? 3 : 2 );'
+						'translateX = Math.max(',
+						'let tabCenterOffset = tabWidth / (aOptions.canDropOnSelf ? 3 : 2 );\n' +
+						'if (aOptions.canDropOnSelf) {\n' +
+						'  leftBound -= tabCenterOffset;\n' +
+						'  rightBound += tabCenterOffset;\n' +
+						'}\n'
 					).replace(
 						'let tabCenter = ',
 						'draggedTabs.slice(1).forEach(function(tab) {\n' +
 						'  tab.style.transform = draggedTab.style.transform;\n' +
 						'}, this);\n' +
 						'let dontMove = false;\n' +
+						'let lastTabCenter = Math.round(tabScreenX + translateX + tabsWidth - tabWidth / 2);\n' +
 						'$&'
 					).replace(
-						'tabs[mid] == draggedTab',
-						'/* $& */ false'
+						'if (screenX > tabCenter)',
+						'/* $& */ if (screenX > lastTabCenter)'
 					).replace(
 						'newIndex = tabs[mid]._tPos;',
+						'$&\n' +
 						'dontMove = (aOptions.canDropOnSelf &&\n' +
 						'            ((draggedTab._dragData.previousPosition > currentPosition &&\n' +
 						'              screenX + tabCenterOffset < tabCenter) ||\n' +
 						'             (draggedTab._dragData.previousPosition < currentPosition &&\n' +
-						'              screenX + boxObject[size] - tabCenterOffset > tabCenter)));\n'
+						'              screenX + boxObject[size] - tabCenterOffset > lastTabCenter)));\n'
 					).replace(
 						'if (newIndex >= oldIndex)',
 						'draggedTab._dragData.previousPosition = currentPosition;\n' +
+						'if (dontMove) return;\n' +
 						'$&'
 					).replace(
 						'draggedTab._dragData.animDropIndex = newIndex',
@@ -280,7 +286,6 @@
 //             tabs.reverse();
 // 
 //           let tabWidth = draggedTab.getBoundingClientRect()[size]/*.width*/;
-// let tabCenterOffset = tabWidth / (aOptions.canDropOnSelf ? 3 : 2 );
 // 
 //           // Move the dragged tab based on the mouse position.
 // 
@@ -294,6 +299,11 @@
 //           let leftBound = leftTab.boxObject[position]/*.screenX*/ - tabScreenX;
 //           let rightBound = (rightTab.boxObject[position]/*.screenX*/ + rightTab.boxObject[size]/*.width*/) -
 //                            (tabScreenX + tabWidth);
+// let tabCenterOffset = tabWidth / (aOptions.canDropOnSelf ? 3 : 2 );
+// if (aOptions.canDropOnSelf) {
+//   leftBound -= tabCenterOffset;
+//   rightBound += tabCenterOffset;
+// }
 //           translateX = Math.max(translateX, leftBound);
 //           translateX = Math.min(translateX, rightBound);
 //           draggedTab.style.transform = "translateX(" + translateX + "px)";
@@ -309,6 +319,7 @@
 //   tab.style.transform = draggedTab.style.transform;
 // }, this);
 // let dontMove = false;
+// let lastTabCenter = Math.round(tabScreenX + translateX + tabsWidth - tabWidth / 2);
 //           let tabCenter = Math.round(tabScreenX + translateX + tabWidth / 2);
 //           let newIndex = -1;
 //           let oldIndex = "animDropIndex" in draggedTab._dragData ?
@@ -323,7 +334,8 @@
 //               break;
 //             let boxObject = tabs[mid].boxObject;
 //             let screenX = boxObject[position]/*.screenX*/ + getTabShift(tabs[mid], oldIndex);
-//             if (screenX > tabCenter) {
+// //            if (screenX > tabCenter) {
+//             if (screenX > lastTabCenter) {
 //               high = mid - 1;
 //             } else if (screenX + boxObject.width < tabCenter) {
 //               low = mid + 1;
@@ -333,11 +345,12 @@
 //             ((draggedTab._dragData.previousPosition > currentPosition &&
 //               screenX + tabCenterOffset < tabCenter) ||
 //              (draggedTab._dragData.previousPosition < currentPosition &&
-//               screenX + boxObject[size] - tabCenterOffset > tabCenter)));
+//               screenX + boxObject[size] - tabCenterOffset > lastTabCenter)));
 //               break;
 //             }
 //           }
 // draggedTab._dragData.previousPosition = currentPosition;
+// if (dontMove) return;
 //           if (newIndex >= oldIndex)
 //             newIndex++;
 //           if (newIndex < 0 || newIndex == oldIndex)
